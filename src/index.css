@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-serif: "Cormorant Garamond", serif;
   
   --color-bg: #F8F9FA;
   --color-ink: #1A1A1A;
@@ -14,6 +13,14 @@
 
 @layer base {
   body {
-    @apply bg-bg text-ink font-sans antialiased;
+    @apply bg-bg text-ink font-sans antialiased text-[14px] leading-normal;
   }
+}
+
+/* 数据表：按内容自适应宽度，至少撑满容器，外层 overflow-x-auto 出现横向滚动条 */
+.app-data-table {
+  table-layout: auto;
+  width: max(100%, max-content);
+  min-width: 100%;
+  border-collapse: collapse;
 }
