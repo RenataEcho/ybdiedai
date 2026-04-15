@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useState,
   useMemo,
   useRef,
@@ -7,6 +8,7 @@ import {
   useCallback,
   type ChangeEvent,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -31,7 +33,7 @@ import {
   Plus,
   X,
   Settings,
-  ChevronLeft,
+  Settings2,
   Edit2,
   Check,
   ChevronDown,
@@ -42,13 +44,23 @@ import {
   Upload,
   ImagePlus,
   Film,
-  Bold,
-  Italic,
-  List,
-  Link as LinkIcon,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FolderKanban,
+  GripVertical,
+  GitBranch,
+  UsersRound,
+  Shield,
+  Gift,
+  Building2,
+  Headphones,
+  FileSearch,
+  Bell,
+  ClipboardCheck,
+  UserCog,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { 
   individualData, 
@@ -73,11 +85,135 @@ import {
   type AcademyBrandProject,
   fetchAcademyBrandProjects
 } from './mockData';
+import {
+  emptyProjectManagementForm,
+  fetchMemberTypeNames,
+  formToRow,
+  PROJECT_CATEGORY_LABEL,
+  rowToForm,
+  type ProjectManagementFormState,
+  type ProjectManagementRow,
+} from './projectManagementModel';
+import { ProjectManagementDrawerFields, ProjectManagementTable } from './ProjectManagementViews';
+import {
+  emptyIterationRecordForm,
+  rowToIterationForm,
+  createIterationRowFromForm,
+  iterationContentPlainText,
+  ITERATION_SCOPE_LABEL,
+  parseIterationPriority,
+  type IterationNavScope,
+  type IterationRecordRow,
+  type IterationRecordFormState,
+} from './iterationRecordModel';
+import { IterationRecordDrawerFields, IterationRecordTable, type IterationStaffOption } from './IterationRecordViews';
+import {
+  loadIterationRecordsFromStorage,
+  loadProductStaffFromStorage,
+  loadSectGuildFromStorage,
+  loadRewardManagementFromStorage,
+  loadProjectManagementFromStorage,
+  loadYouboomTeamFromStorage,
+  loadAcademyCategoriesFromStorage,
+  loadAcademyContentsFromStorage,
+  readLocalJson,
+  saveIterationRecordsToStorage,
+  saveProductStaffToStorage,
+  saveSectGuildToStorage,
+  saveRewardManagementToStorage,
+  saveProjectManagementToStorage,
+  saveYouboomTeamToStorage,
+  saveAcademyCategoriesToStorage,
+  saveAcademyContentsToStorage,
+  STORAGE_KEYS,
+  writeFieldConfigDescriptionOverridesToStorage,
+} from './localWorkspacePersistence';
+import { useResizableTableColumns } from './resizableTableColumns';
+import {
+  createProductStaffRow,
+  emptyProductStaffForm,
+  rowToProductStaffForm,
+  type ProductStaffFormState,
+  type ProductStaffRow,
+} from './productStaffModel';
+import { ProductStaffDrawerFields, ProductStaffTable } from './ProductStaffViews';
+import {
+  createSectGuildRowFromForm,
+  emptySectGuildForm,
+  rowToSectGuildForm,
+  type SectGuildFormState,
+  type SectGuildStatus,
+} from './sectGuildModel';
+import { SectGuildDrawerFields, SectGuildTable } from './SectGuildViews';
+import {
+  RewardBatchImportDrawer,
+  RewardManagementTable,
+  RewardPaymentQueueDrawer,
+  RewardRejectModal,
+} from './RewardManagementViews';
+import {
+  emptyRewardMgmtSearch,
+  exportRewardMgmtExcel,
+  downloadRewardImportExcelTemplate,
+  REWARD_AUDIT_LABEL,
+  REWARD_BUSINESS_LABEL,
+  REWARD_PAYMENT_LABEL,
+  type RewardManagementRow,
+} from './rewardManagementModel';
+import { YouboomTeamTable } from './YouboomTeamViews';
+import { Pagination } from './Pagination';
+import {
+  emptyYouboomTeamSearch,
+  type YouboomTeamSortField,
+  type SortOrder,
+} from './youboomTeamModel';
+import { RichTextEditor } from './RichTextEditor';
+import {
+  PAGE_RULE_CATALOG,
+  PRODUCT_LINE_NAV_ORDER,
+  PRODUCT_LINE_TAB_LABEL,
+  type ProductLine,
+} from './pageRuleCatalog';
+import { RuleDescriptionPage } from './RuleDescriptionPage';
+import { MenuRuleDescriptionModal, NavRuleHintButton } from './MenuRuleDescriptionModal';
+import { MODULE_RULE_ROUTE_KEYS } from './secondaryNavRuleRoutes';
+import { CustomerServiceManagementPage } from './CustomerServiceManagementPage';
+import { OrganizationMentorManagementPage } from './OrganizationMentorManagementPage';
+import { OrganizationProjectAllocationPage } from './OrganizationProjectAllocationPage';
+import { EntryAuditWorkbenchPage } from './EntryAuditWorkbenchPage';
+import { MessageNotificationRecordsPage } from './MessageNotificationRecordsPage';
+import { GanttMapPage, type GanttBarRef } from './GanttMapPage';
+import { DashboardPage } from './DashboardPage';
+import { DevSaveToRepo } from './DevSaveToRepo';
 
-/** 仅保存「字段说明」覆盖，结构始终以 mockData 为准，避免升级或校验丢弃本地说明 */
-const FIELD_CONFIG_DESCRIPTION_OVERRIDES_KEY = 'ybdiedai-field-config-description-overrides';
+const PM_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-pm-drawer-width';
+const ITERATION_RECORD_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-iteration-record-drawer-width';
+
+function readInitialPmDrawerWidth(): number {
+  if (typeof window === 'undefined') return 640;
+  try {
+    const raw = localStorage.getItem(PM_DRAWER_WIDTH_STORAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    if (Number.isFinite(n)) return Math.max(420, Math.min(1200, n));
+  } catch {
+    /* ignore */
+  }
+  return 640;
+}
+
+function readInitialIterationRecordDrawerWidth(): number {
+  if (typeof window === 'undefined') return 640;
+  try {
+    const raw = localStorage.getItem(ITERATION_RECORD_DRAWER_WIDTH_STORAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    if (Number.isFinite(n)) return Math.max(420, Math.min(1200, n));
+  } catch {
+    /* ignore */
+  }
+  return 640;
+}
+
 /** 历史整表 JSON（仍可读并迁移出说明） */
-const FIELD_CONFIG_LEGACY_FULL_KEY = 'ybdiedai-field-configurations';
 
 function migrateLegacyFullArrayToDescriptionOverrides(raw: string): Record<string, string> | null {
   try {
@@ -99,32 +235,21 @@ function migrateLegacyFullArrayToDescriptionOverrides(raw: string): Record<strin
 
 function loadDescriptionOverrides(): Record<string, string> {
   if (typeof window === 'undefined') return {};
-  try {
-    const direct = localStorage.getItem(FIELD_CONFIG_DESCRIPTION_OVERRIDES_KEY);
-    if (direct) {
-      const parsed = JSON.parse(direct) as unknown;
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const out: Record<string, string> = {};
-        for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-          if (typeof v === 'string') out[k] = v;
-        }
-        if (Object.keys(out).length > 0) return out;
-      }
+  const directParsed = readLocalJson<unknown>(STORAGE_KEYS.fieldConfigDescriptionOverrides);
+  if (directParsed && typeof directParsed === 'object' && !Array.isArray(directParsed)) {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(directParsed as Record<string, unknown>)) {
+      if (typeof v === 'string') out[k] = v;
     }
-    const legacy = localStorage.getItem(FIELD_CONFIG_LEGACY_FULL_KEY);
-    if (legacy) {
-      const migrated = migrateLegacyFullArrayToDescriptionOverrides(legacy);
-      if (migrated) {
-        try {
-          localStorage.setItem(FIELD_CONFIG_DESCRIPTION_OVERRIDES_KEY, JSON.stringify(migrated));
-        } catch {
-          /* ignore */
-        }
-        return migrated;
-      }
+    if (Object.keys(out).length > 0) return out;
+  }
+  const legacy = localStorage.getItem(STORAGE_KEYS.fieldConfigLegacyFull);
+  if (legacy) {
+    const migrated = migrateLegacyFullArrayToDescriptionOverrides(legacy);
+    if (migrated) {
+      writeFieldConfigDescriptionOverridesToStorage(migrated);
+      return migrated;
     }
-  } catch {
-    /* ignore */
   }
   return {};
 }
@@ -132,7 +257,7 @@ function loadDescriptionOverrides(): Record<string, string> {
 function compactOverridesForWorkspace(overrides: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [id, text] of Object.entries(overrides)) {
-    if (!/^f\d+$/.test(id)) continue;
+    if (!/^(f\d+|yb\d+|mt\d+)$/.test(id)) continue;
     const def = fieldConfigurationDescriptionDefaults[id];
     if (def !== undefined && text !== def) out[id] = text;
   }
@@ -140,11 +265,7 @@ function compactOverridesForWorkspace(overrides: Record<string, string>): Record
 }
 
 function persistDescriptionOverrides(overrides: Record<string, string>) {
-  try {
-    localStorage.setItem(FIELD_CONFIG_DESCRIPTION_OVERRIDES_KEY, JSON.stringify(overrides));
-  } catch {
-    /* ignore quota / private mode */
-  }
+  writeFieldConfigDescriptionOverridesToStorage(overrides);
   const compact = compactOverridesForWorkspace(overrides);
   void fetch('/__dev/api/save-field-config-descriptions', {
     method: 'POST',
@@ -176,7 +297,47 @@ function buildFieldConfigsFromOverrides(overrides: Record<string, string>): Fiel
   }));
 }
 
-type ModuleType = 'leaderboard' | 'recommendation' | 'academy' | 'config';
+type ModuleType =
+  | 'leaderboard'
+  | 'recommendation'
+  | 'academy'
+  | 'projectManagement'
+  | 'iterationRecord'
+  | 'sectManagement'
+  | 'customerServiceManagement'
+  | 'organizationMentorManagement'
+  | 'organizationProjectAllocation'
+  | 'auditEntryWorkbench'
+  | 'auditMessageNotification'
+  | 'config'
+  | 'ruleDescription'
+  | 'rewardManagement'
+  | 'youboomTeam'
+  | 'productStaff'
+  | 'ganttMap'
+  | 'dashboard';
+
+const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
+  leaderboard: '榜单数据',
+  recommendation: '首页推荐',
+  academy: '学院管理',
+  projectManagement: '项目管理',
+  iterationRecord: '迭代记录',
+  sectManagement: '门派管理',
+  customerServiceManagement: '客服管理',
+  organizationMentorManagement: '导师管理',
+  organizationProjectAllocation: '项目分配',
+  auditEntryWorkbench: '录入审核工作台',
+  auditMessageNotification: '消息通知记录',
+  rewardManagement: '奖励管理',
+  youboomTeam: '团队数据',
+  config: '字段配置',
+  ruleDescription: '规则说明',
+  productStaff: '产研人员管理',
+  ganttMap: '甘特地图',
+  dashboard: 'Dashboard',
+};
+
 type LeaderboardTab = 'individual' | 'team' | 'community';
 type RecommendationTab = 'brand' | 'drama' | 'category';
 type AcademyTab = 'academy-category' | 'academy-content';
@@ -233,7 +394,16 @@ type AcademyContentFormState = {
 type SideDrawerState =
   | { variant: 'drama-category'; editingId: string | null; form: DramaCategoryFormState }
   | { variant: 'academy-category'; editingId: string | null; form: AcademyCategoryFormState }
-  | { variant: 'academy-content'; editingId: string | null; form: AcademyContentFormState };
+  | { variant: 'academy-content'; editingId: string | null; form: AcademyContentFormState }
+  | { variant: 'project-management'; editingId: string | null; form: ProjectManagementFormState }
+  | {
+      variant: 'iteration-record';
+      editingId: string | null;
+      scope: IterationNavScope;
+      form: IterationRecordFormState;
+    }
+  | { variant: 'sect-guild'; editingId: string | null; form: SectGuildFormState }
+  | { variant: 'product-staff'; editingId: string | null; form: ProductStaffFormState };
 
 /** 各模块文本检索：草稿在输入框中编辑，点击「搜索」后写入 applied 参与列表过滤 */
 type TextSearchForm = {
@@ -249,6 +419,10 @@ type TextSearchForm = {
     youbaoId: string;
     projectName: string;
   };
+  projectMgmt: { keyword: string };
+  iterationRecord: { title: string; content: string };
+  sectGuild: { keyword: string };
+  productStaff: { name: string };
 };
 
 function createEmptyTextSearch(): TextSearchForm {
@@ -265,6 +439,10 @@ function createEmptyTextSearch(): TextSearchForm {
       youbaoId: '',
       projectName: '',
     },
+    projectMgmt: { keyword: '' },
+    iterationRecord: { title: '', content: '' },
+    sectGuild: { keyword: '' },
+    productStaff: { name: '' },
   };
 }
 
@@ -272,7 +450,8 @@ const textFieldInputClass =
   'min-w-[120px] max-w-[200px] px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm';
 
 export default function App() {
-  const [activeModule, setActiveModule] = useState<ModuleType>('leaderboard');
+  const [isDark, setIsDark] = useState(false);
+  const [activeModule, setActiveModule] = useState<ModuleType>('ganttMap');
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>('individual');
   const [recommendationTab, setRecommendationTab] = useState<RecommendationTab>('brand');
   const [academyTab, setAcademyTab] = useState<AcademyTab>('academy-category');
@@ -290,12 +469,58 @@ export default function App() {
   const [academyContentTypeFilter, setAcademyContentTypeFilter] = useState<string>('all');
   const [academyContentTagFilter, setAcademyContentTagFilter] = useState<string>('all');
   const [academyContentStatusFilter, setAcademyContentStatusFilter] = useState<string>('all');
+  const [projectMgmtRows, setProjectMgmtRows] = useState<ProjectManagementRow[]>(() => loadProjectManagementFromStorage());
+  const [memberTypeNames, setMemberTypeNames] = useState<string[]>([]);
+  const [projectMgmtCategoryFilter, setProjectMgmtCategoryFilter] = useState<
+    'all' | 'tweet' | 'drama' | 'resource' | 'app'
+  >('all');
+  const [projectMgmtStatusFilter, setProjectMgmtStatusFilter] = useState<'all' | 'show' | 'hide'>('all');
+  const [ganttProductLine, setGanttProductLine] = useState<ProductLine>('youbao');
+  const [iterationRecordScope, setIterationRecordScope] = useState<IterationNavScope>('youbao');
+  const [iterationRecordRows, setIterationRecordRows] = useState<IterationRecordRow[]>(() =>
+    loadIterationRecordsFromStorage()
+  );
+  const [productStaffRows, setProductStaffRows] = useState<ProductStaffRow[]>(() => loadProductStaffFromStorage());
+  const [menuRuleModal, setMenuRuleModal] = useState<{
+    open: boolean;
+    navTitle: string;
+    routeKeys: readonly string[];
+  }>({ open: false, navTitle: '', routeKeys: [] });
 
+  const openMenuRuleModalFromKeys = useCallback((navTitle: string, routeKeys: readonly string[]) => {
+    setMenuRuleModal({ open: true, navTitle, routeKeys });
+  }, []);
+
+  const closeMenuRuleModal = useCallback(() => {
+    setMenuRuleModal((s) => ({ ...s, open: false }));
+  }, []);
+  const [sectGuildRows, setSectGuildRows] = useState(() => loadSectGuildFromStorage());
+  const [rewardMgmtRows, setRewardMgmtRows] = useState<RewardManagementRow[]>(() => loadRewardManagementFromStorage());
+  const [rewardMgmtSelectedIds, setRewardMgmtSelectedIds] = useState<string[]>([]);
+  const [rewardMgmtSearchDraft, setRewardMgmtSearchDraft] = useState(emptyRewardMgmtSearch);
+  const [rewardMgmtSearchApplied, setRewardMgmtSearchApplied] = useState(emptyRewardMgmtSearch);
+  const [youboomTeamRows] = useState(() => loadYouboomTeamFromStorage());
+  const [youboomTeamSearchDraft, setYouboomTeamSearchDraft] = useState(emptyYouboomTeamSearch);
+  const [youboomTeamSearchApplied, setYouboomTeamSearchApplied] = useState(emptyYouboomTeamSearch);
+  const [youboomTeamSortField, setYouboomTeamSortField] = useState<YouboomTeamSortField | null>(null);
+  const [youboomTeamSortOrder, setYouboomTeamSortOrder] = useState<SortOrder>(null);
+  const [rewardImportDrawerOpen, setRewardImportDrawerOpen] = useState(false);
+  const [rewardPaymentQueueOpen, setRewardPaymentQueueOpen] = useState(false);
+  const [rewardRejectModalOpen, setRewardRejectModalOpen] = useState(false);
+  const [projectMgmtDrawerWidth, setProjectMgmtDrawerWidth] = useState(readInitialPmDrawerWidth);
+  const [iterationRecordDrawerWidth, setIterationRecordDrawerWidth] = useState(
+    readInitialIterationRecordDrawerWidth
+  );
+  const drawerResizeDragRef = useRef<{
+    kind: 'project-management' | 'iteration-record';
+    startX: number;
+    startW: number;
+  } | null>(null);
   const [sideDrawer, setSideDrawer] = useState<SideDrawerState | null>(null);
   const isDrawerOpen = sideDrawer !== null;
 
-  const [academyCategories, setAcademyCategories] = useState<AcademyCategory[]>(() => [...academyCategoryInitialData]);
-  const [academyContents, setAcademyContents] = useState<AcademyContent[]>(() => [...academyContentInitialData]);
+  const [academyCategories, setAcademyCategories] = useState<AcademyCategory[]>(() => loadAcademyCategoriesFromStorage());
+  const [academyContents, setAcademyContents] = useState<AcademyContent[]>(() => loadAcademyContentsFromStorage());
   const [selectedAcademyContentIds, setSelectedAcademyContentIds] = useState<string[]>([]);
   const [contentPreview, setContentPreview] = useState<{
     title: string;
@@ -343,6 +568,38 @@ export default function App() {
   }, [editingFieldId, editDescription]);
 
   useEffect(() => {
+    saveIterationRecordsToStorage(iterationRecordRows);
+  }, [iterationRecordRows]);
+
+  useEffect(() => {
+    saveProductStaffToStorage(productStaffRows);
+  }, [productStaffRows]);
+
+  useEffect(() => {
+    saveSectGuildToStorage(sectGuildRows);
+  }, [sectGuildRows]);
+
+  useEffect(() => {
+    saveRewardManagementToStorage(rewardMgmtRows);
+  }, [rewardMgmtRows]);
+
+  useEffect(() => {
+    saveProjectManagementToStorage(projectMgmtRows);
+  }, [projectMgmtRows]);
+
+  useEffect(() => {
+    saveYouboomTeamToStorage(youboomTeamRows);
+  }, [youboomTeamRows]);
+
+  useEffect(() => {
+    saveAcademyCategoriesToStorage(academyCategories);
+  }, [academyCategories]);
+
+  useEffect(() => {
+    saveAcademyContentsToStorage(academyContents);
+  }, [academyContents]);
+
+  useEffect(() => {
     if (activeModule !== 'academy') return;
     let cancelled = false;
     void fetchAcademyBrandProjects().then((list) => {
@@ -352,6 +609,91 @@ export default function App() {
       cancelled = true;
     };
   }, [activeModule]);
+
+  useEffect(() => {
+    if (activeModule !== 'projectManagement') return;
+    let cancelled = false;
+    void fetchMemberTypeNames().then((list) => {
+      if (!cancelled) setMemberTypeNames(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeModule]);
+
+  const clampPmDrawerWidth = useCallback((w: number) => {
+    if (typeof window === 'undefined') return Math.max(420, Math.min(1200, w));
+    const max = Math.min(1200, window.innerWidth - 24);
+    return Math.max(420, Math.min(max, Math.round(w)));
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      setProjectMgmtDrawerWidth((v) => clampPmDrawerWidth(v));
+      setIterationRecordDrawerWidth((v) => clampPmDrawerWidth(v));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [clampPmDrawerWidth]);
+
+  const onResizableDrawerResizePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>, kind: 'project-management' | 'iteration-record') => {
+      if (sideDrawer?.variant !== kind) return;
+      e.preventDefault();
+      const startW = kind === 'project-management' ? projectMgmtDrawerWidth : iterationRecordDrawerWidth;
+      drawerResizeDragRef.current = { kind, startX: e.clientX, startW };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [sideDrawer, projectMgmtDrawerWidth, iterationRecordDrawerWidth]
+  );
+
+  const onResizableDrawerResizePointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!drawerResizeDragRef.current) return;
+      const { kind, startX, startW } = drawerResizeDragRef.current;
+      const delta = startX - e.clientX;
+      const next = clampPmDrawerWidth(startW + delta);
+      if (kind === 'project-management') setProjectMgmtDrawerWidth(next);
+      else setIterationRecordDrawerWidth(next);
+    },
+    [clampPmDrawerWidth]
+  );
+
+  const onResizableDrawerResizePointerUp = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const drag = drawerResizeDragRef.current;
+      if (drag) {
+        drawerResizeDragRef.current = null;
+        if (drag.kind === 'project-management') {
+          setProjectMgmtDrawerWidth((w) => {
+            const c = clampPmDrawerWidth(w);
+            try {
+              localStorage.setItem(PM_DRAWER_WIDTH_STORAGE_KEY, String(c));
+            } catch {
+              /* ignore */
+            }
+            return c;
+          });
+        } else {
+          setIterationRecordDrawerWidth((w) => {
+            const c = clampPmDrawerWidth(w);
+            try {
+              localStorage.setItem(ITERATION_RECORD_DRAWER_WIDTH_STORAGE_KEY, String(c));
+            } catch {
+              /* ignore */
+            }
+            return c;
+          });
+        }
+      }
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    [clampPmDrawerWidth]
+  );
 
   useEffect(() => {
     academyBatchDrawerOpenRef.current = academyBatchDrawerOpen;
@@ -457,12 +799,118 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
-  const modules = [
-    { id: 'leaderboard', name: '榜单数据', icon: BarChart3 },
-    { id: 'recommendation', name: '首页推荐', icon: Home },
-    { id: 'academy', name: '学院管理', icon: GraduationCap },
-    { id: 'config', name: '字段配置', icon: Settings },
+  /** 系统配置内「字段配置 / 规则说明」子 Tab：与 `PRODUCT_LINE_NAV_ORDER` 一级菜单对齐 */
+  const [systemProductLine, setSystemProductLine] = useState<ProductLine>('youbao');
+
+  const systemProductLineTabIcons: Record<ProductLine, typeof Layers> = {
+    youbao: Layers,
+    youboom: Sparkles,
+    mentor: UsersRound,
+  };
+  const [ruleDescSearchDraft, setRuleDescSearchDraft] = useState('');
+  const [ruleDescSearchApplied, setRuleDescSearchApplied] = useState('');
+
+  const [navSections, setNavSections] = useState({
+    youbao: true,
+    youboom: false,
+    mentor: true,
+    mentorOrg: true,
+    mentorAudit: true,
+    system: true,
+  });
+
+  const youbaoChildren = [
+    { id: 'dashboard' as const, name: 'Dashboard', icon: LayoutDashboard },
+    { id: 'leaderboard' as const, name: '榜单数据', icon: BarChart3 },
+    { id: 'recommendation' as const, name: '首页推荐', icon: Home },
+    { id: 'academy' as const, name: '学院管理', icon: GraduationCap },
+    { id: 'projectManagement' as const, name: '项目管理', icon: FolderKanban },
   ];
+
+  const showDataTabs =
+    activeModule === 'leaderboard' ||
+    activeModule === 'recommendation' ||
+    activeModule === 'academy';
+
+  const showTableToolbar =
+    showDataTabs ||
+    activeModule === 'config' ||
+    activeModule === 'ruleDescription' ||
+    activeModule === 'projectManagement' ||
+    activeModule === 'iterationRecord' ||
+    activeModule === 'productStaff' ||
+    activeModule === 'sectManagement' ||
+    activeModule === 'rewardManagement' ||
+    activeModule === 'youboomTeam';
+
+  const hideMainPageHeader =
+    activeModule === 'customerServiceManagement' ||
+    activeModule === 'auditEntryWorkbench' ||
+    activeModule === 'auditMessageNotification';
+
+  const pageRuleHeaderAction = useMemo(() => {
+    if (activeModule === 'ganttMap' || activeModule === 'dashboard') {
+      return { show: false as const, navTitle: '', routeKeys: [] as const };
+    }
+    if (activeModule === 'leaderboard') {
+      if (leaderboardTab === 'community') {
+        return { show: true as const, navTitle: '品牌社群榜单', routeKeys: ['community'] as const };
+      }
+      return { show: true as const, navTitle: '榜单数据', routeKeys: ['leaderboard'] as const };
+    }
+    if (activeModule === 'recommendation') {
+      if (recommendationTab === 'brand') {
+        return { show: true as const, navTitle: '品牌推荐', routeKeys: ['brand'] as const };
+      }
+      if (recommendationTab === 'drama') {
+        return { show: true as const, navTitle: '剧作推荐', routeKeys: ['drama'] as const };
+      }
+      return { show: true as const, navTitle: '剧作分类', routeKeys: ['category'] as const };
+    }
+    if (activeModule === 'academy') {
+      if (academyTab === 'academy-category') {
+        return { show: true as const, navTitle: '分类管理', routeKeys: ['academy-category'] as const };
+      }
+      return { show: true as const, navTitle: '内容配置', routeKeys: ['academy-content'] as const };
+    }
+    if (activeModule === 'ruleDescription') {
+      const keys = PAGE_RULE_CATALOG.filter((c) => c.productLine === systemProductLine).map((c) => c.routeKey);
+      return {
+        show: true as const,
+        navTitle: `${PRODUCT_LINE_TAB_LABEL[systemProductLine]} · 规则说明`,
+        routeKeys: keys,
+      };
+    }
+    const routeKeys = MODULE_RULE_ROUTE_KEYS[activeModule as keyof typeof MODULE_RULE_ROUTE_KEYS];
+    if (!routeKeys) return { show: false as const, navTitle: '', routeKeys: [] as const };
+    return {
+      show: true as const,
+      navTitle: MODULE_PAGE_TITLE[activeModule],
+      routeKeys,
+    };
+  }, [activeModule, leaderboardTab, recommendationTab, academyTab, systemProductLine]);
+
+  const contentShellClass =
+    activeModule === 'ruleDescription' || hideMainPageHeader
+      ? 'bg-transparent border-0 shadow-none rounded-2xl'
+      : 'bg-white border border-line rounded-2xl shadow-sm';
+
+  const projectMgmtFieldRules: Record<string, string> = {
+    projectId: '列表中的业务项目唯一标识。',
+    category: '推文、短剧、资源、应用四类所属分类。',
+    sort: '列表排序权重，数值越大越靠前。',
+    virtualIncome: '用于展示的虚拟收益数值。',
+    frontTitle: '前台 C 端展示的项目标题。',
+    backTitle: '后台列表中使用的项目名称。',
+    boomSort: '爆单榜等场景的排序权重或序号。',
+    projectTags: '项目侧标签文案，多个可用逗号分隔。',
+    projectStatus: '显示或隐藏控制前台是否露出。',
+    hotProject: '是否标记为热门项目。',
+    isNewProduct: '是否标记为新品。',
+    onlineState: '上线或下线，控制业务可用状态。',
+    memberType: '可见该项目的会员档位或策略名称。',
+    updateTime: '最近一次保存或同步的时间。',
+  };
 
   const academyCategoryRows = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -602,6 +1050,8 @@ export default function App() {
     const qc = fieldCnName.trim().toLowerCase();
     const qe = fieldEnName.trim().toLowerCase();
     return fieldConfigs.filter((item) => {
+      const line = item.productLine ?? 'youbao';
+      if (line !== systemProductLine) return false;
       const matchesSearch =
         (!qm || item.menuName.toLowerCase().includes(qm)) &&
         (!qr || item.routeKey.toLowerCase().includes(qr)) &&
@@ -609,10 +1059,156 @@ export default function App() {
         (!qe || item.fieldEnName.toLowerCase().includes(qe));
       return matchesSearch;
     });
-  }, [textSearchApplied.config, fieldConfigs]);
+  }, [textSearchApplied.config, fieldConfigs, systemProductLine]);
+
+  const filteredProjectMgmtRows = useMemo(() => {
+    const q = textSearchApplied.projectMgmt.keyword.trim().toLowerCase();
+    return projectMgmtRows.filter((row) => {
+      const matchesKw =
+        !q ||
+        row.id.toLowerCase().includes(q) ||
+        row.frontTitle.toLowerCase().includes(q) ||
+        row.backTitle.toLowerCase().includes(q);
+      const matchesCat = projectMgmtCategoryFilter === 'all' || row.category === projectMgmtCategoryFilter;
+      const matchesStatus =
+        projectMgmtStatusFilter === 'all' || row.projectStatus === projectMgmtStatusFilter;
+      return matchesKw && matchesCat && matchesStatus;
+    });
+  }, [projectMgmtRows, textSearchApplied.projectMgmt, projectMgmtCategoryFilter, projectMgmtStatusFilter]);
+
+  const iterationStaffOptions: IterationStaffOption[] = useMemo(
+    () => productStaffRows.map((r) => ({ id: r.id, name: r.name, title: r.title })),
+    [productStaffRows]
+  );
+
+  const iterationStaffNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of productStaffRows) m.set(r.id, r.name);
+    return m;
+  }, [productStaffRows]);
+
+  const commitGanttBarRange = useCallback((recordId: string, ref: GanttBarRef, startYmd: string, endYmd: string) => {
+    setIterationRecordRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== recordId) return row;
+        if (ref.type === 'parent') {
+          return { ...row, parentDateStart: startYmd, parentDateEnd: endYmd };
+        }
+        return {
+          ...row,
+          subRequirements: row.subRequirements.map((s) =>
+            s.id === ref.subId ? { ...s, dateStart: startYmd, dateEnd: endYmd } : s
+          ),
+        };
+      })
+    );
+  }, []);
+
+  const filteredIterationRecordRows = useMemo(() => {
+    const { title, content } = textSearchApplied.iterationRecord;
+    const qt = title.trim().toLowerCase();
+    const qc = content.trim().toLowerCase();
+    return iterationRecordRows.filter((row) => {
+      if (row.scope !== iterationRecordScope) return false;
+      const matchesTitle =
+        !qt ||
+        row.parentRequirement.toLowerCase().includes(qt) ||
+        row.subRequirements.some((s) => s.title.toLowerCase().includes(qt));
+      const matchesContent =
+        !qc ||
+        iterationContentPlainText(row.detailRulesHtml).includes(qc) ||
+        iterationContentPlainText(row.notesHtml).includes(qc);
+      return matchesTitle && matchesContent;
+    });
+  }, [iterationRecordRows, iterationRecordScope, textSearchApplied.iterationRecord]);
+
+  const filteredProductStaffRows = useMemo(() => {
+    const q = textSearchApplied.productStaff.name.trim().toLowerCase();
+    return productStaffRows.filter((row) => !q || row.name.toLowerCase().includes(q));
+  }, [productStaffRows, textSearchApplied.productStaff.name]);
+
+  const filteredSectGuildRows = useMemo(() => {
+    const q = textSearchApplied.sectGuild.keyword.trim().toLowerCase();
+    return sectGuildRows.filter((row) => {
+      if (!q) return true;
+      return (
+        row.name.toLowerCase().includes(q) ||
+        row.leaderName.toLowerCase().includes(q) ||
+        row.id.toLowerCase().includes(q)
+      );
+    });
+  }, [sectGuildRows, textSearchApplied.sectGuild.keyword]);
+
+  const filteredRewardMgmtRows = useMemo(() => {
+    const f = rewardMgmtSearchApplied;
+    const qn = f.projectName.trim().toLowerCase();
+    const qu = f.userId.trim().toLowerCase();
+    const qk = (f.keyword ?? '').trim().toLowerCase();
+    const start = f.importDateStart ? new Date(`${f.importDateStart}T00:00:00`).getTime() : null;
+    const end = f.importDateEnd ? new Date(`${f.importDateEnd}T23:59:59.999`).getTime() : null;
+    return rewardMgmtRows.filter((row) => {
+      if (f.businessType !== 'all' && row.businessType !== f.businessType) return false;
+      if (f.auditStatus !== 'all' && row.auditStatus !== f.auditStatus) return false;
+      if (f.paymentStatus !== 'all' && row.paymentStatus !== f.paymentStatus) return false;
+      if (qn && !row.projectName.toLowerCase().includes(qn)) return false;
+      if (qu && !row.userId.toLowerCase().includes(qu)) return false;
+      if (qk && !row.keyword.toLowerCase().includes(qk)) return false;
+      const ti = new Date(row.importedAt).getTime();
+      if (start !== null && ti < start) return false;
+      if (end !== null && ti > end) return false;
+      return true;
+    });
+  }, [rewardMgmtRows, rewardMgmtSearchApplied]);
+
+  const filteredYouboomTeamRows = useMemo(() => {
+    const qId = youboomTeamSearchApplied.leaderId.trim();
+    let rows = youboomTeamRows.filter((row) => {
+      if (qId && row.leaderId !== qId) return false;
+      return true;
+    });
+    if (youboomTeamSortField && youboomTeamSortOrder) {
+      const field = youboomTeamSortField;
+      const order = youboomTeamSortOrder;
+      rows = [...rows].sort((a, b) => {
+        const va = a[field] as number;
+        const vb = b[field] as number;
+        return order === 'asc' ? va - vb : vb - va;
+      });
+    }
+    return rows;
+  }, [youboomTeamRows, youboomTeamSearchApplied, youboomTeamSortField, youboomTeamSortOrder]);
+
+  const handleYouboomTeamSort = (field: YouboomTeamSortField) => {
+    if (youboomTeamSortField !== field) {
+      // 切换到新字段：首次默认高到低
+      setYouboomTeamSortField(field);
+      setYouboomTeamSortOrder('desc');
+    } else if (youboomTeamSortOrder === 'desc') {
+      // 高到低 → 低到高
+      setYouboomTeamSortOrder('asc');
+    } else if (youboomTeamSortOrder === 'asc') {
+      // 低到高 → 取消排序
+      setYouboomTeamSortField(null);
+      setYouboomTeamSortOrder(null);
+    } else {
+      // 无排序 → 高到低
+      setYouboomTeamSortField(field);
+      setYouboomTeamSortOrder('desc');
+    }
+  };
 
   const applyTextSearch = () => {
     setTextSearchApplied(structuredClone(textSearchDraft));
+    if (activeModule === 'ruleDescription') {
+      setRuleDescSearchApplied(ruleDescSearchDraft.trim());
+    }
+    if (activeModule === 'rewardManagement') {
+      setRewardMgmtSearchApplied(structuredClone(rewardMgmtSearchDraft));
+      setRewardMgmtSelectedIds([]);
+    }
+    if (activeModule === 'youboomTeam') {
+      setYouboomTeamSearchApplied(structuredClone(youboomTeamSearchDraft));
+    }
     setCurrentPage(1);
   };
 
@@ -620,6 +1216,8 @@ export default function App() {
     const empty = createEmptyTextSearch();
     setTextSearchDraft(empty);
     setTextSearchApplied(empty);
+    setRuleDescSearchDraft('');
+    setRuleDescSearchApplied('');
     setTypeFilter('all');
     setDimensionFilter('all');
     setHotFilter('all');
@@ -632,7 +1230,40 @@ export default function App() {
     setAcademyContentTagFilter('all');
     setAcademyContentStatusFilter('all');
     setSelectedAcademyContentIds([]);
+    setProjectMgmtCategoryFilter('all');
+    setProjectMgmtStatusFilter('all');
+    setRewardMgmtSearchDraft(emptyRewardMgmtSearch());
+    setRewardMgmtSearchApplied(emptyRewardMgmtSearch());
+    setRewardMgmtSelectedIds([]);
+    setYouboomTeamSearchDraft(emptyYouboomTeamSearch());
+    setYouboomTeamSearchApplied(emptyYouboomTeamSearch());
     setCurrentPage(1);
+  };
+
+  const selectSystemProductLine = (line: ProductLine) => {
+    setSystemProductLine(line);
+    setCurrentPage(1);
+    setTextSearchDraft((d) => ({
+      ...d,
+      config: { menuName: '', routeKey: '', fieldCnName: '', fieldEnName: '' },
+    }));
+    setTextSearchApplied((d) => ({
+      ...d,
+      config: { menuName: '', routeKey: '', fieldCnName: '', fieldEnName: '' },
+    }));
+    setRuleDescSearchDraft('');
+    setRuleDescSearchApplied('');
+  };
+
+  const selectModule = (m: ModuleType) => {
+    setActiveModule(m);
+    resetFilters();
+  };
+
+  const openIterationRecord = (scope: IterationNavScope) => {
+    setIterationRecordScope(scope);
+    setActiveModule('iterationRecord');
+    resetFilters();
   };
 
   const getFieldRule = (routeKey: string, fieldEnName: string) => {
@@ -672,7 +1303,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className={`flex min-h-screen bg-bg${isDark ? ' dark' : ''}`}>
       {/* 挂在抽屉外：避免文件框关闭时遮罩卸载抽屉导致 input 被移除、onChange 不触发 */}
       <input
         ref={academyBatchVideoInputRef}
@@ -689,159 +1320,585 @@ export default function App() {
         }}
       />
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-line flex flex-col sticky top-0 h-screen z-30">
+      <aside className="w-64 border-r border-line flex flex-col sticky top-0 h-screen z-30" style={{ background: 'var(--color-sidebar)' }}>
         <div className="p-6 border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
               <Layers className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg tracking-tight">右豹后台迭代</span>
+            <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white/90">不鸣文化后台迭代</span>
           </div>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1">
-          {modules.map((mod) => {
-            const Icon = mod.icon;
-            const isActive = activeModule === mod.id;
-            return (
-              <button
-                key={mod.id}
-                onClick={() => {
-                  setActiveModule(mod.id as ModuleType);
-                  resetFilters();
-                }}
-                className={`
-                  w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all group cursor-pointer
-                  ${isActive ? 'bg-accent/5 text-accent' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-accent' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                  {mod.name}
-                </div>
-                {isActive && <ChevronRight className="w-4 h-4" />}
-              </button>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
+          <button
+            type="button"
+            onClick={() => selectModule('ganttMap')}
+            className={`
+              flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer
+              ${
+                activeModule === 'ganttMap'
+                  ? 'bg-accent text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-white/75 dark:hover:bg-white/8'
+              }
+            `}
+          >
+            <span className="flex items-center gap-2">
+              <Calendar className={`h-4 w-4 ${activeModule === 'ganttMap' ? 'text-white' : 'text-accent'}`} />
+              甘特地图
+            </span>
+            {activeModule === 'ganttMap' ? <ChevronRight className="h-4 w-4 text-white/90" /> : null}
+          </button>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setNavSections((s) => ({ ...s, youbao: !s.youbao }))}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+            >
+              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Layers className="h-4 w-4 text-accent" />
+                右豹迭代
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youbao ? '' : '-rotate-90'}`}
+              />
+            </button>
+            {navSections.youbao && (
+              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+                <button
+                  type="button"
+                  onClick={() => openIterationRecord('youbao')}
+                  className={`
+                        flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                        ${
+                          activeModule === 'iterationRecord' && iterationRecordScope === 'youbao'
+                            ? 'bg-accent/5 text-accent'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                        }
+                      `}
+                >
+                  <span className="flex items-center gap-2">
+                    <GitBranch
+                      className={`h-4 w-4 ${
+                        activeModule === 'iterationRecord' && iterationRecordScope === 'youbao'
+                          ? 'text-accent'
+                          : 'text-gray-400'
+                      }`}
+                    />
+                    迭代记录
+                  </span>
+                  {activeModule === 'iterationRecord' && iterationRecordScope === 'youbao' ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : null}
+                </button>
+                {youbaoChildren.map((mod) => {
+                  const Icon = mod.icon;
+                  const isActive = activeModule === mod.id;
+                  return (
+                    <button
+                      key={mod.id}
+                      type="button"
+                      onClick={() => selectModule(mod.id)}
+                      className={`
+                        flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                        ${isActive ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                      `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icon className={`h-4 w-4 ${isActive ? 'text-accent' : 'text-gray-400 dark:text-white/35'}`} />
+                        {mod.name}
+                      </span>
+                      {isActive && <ChevronRight className="h-4 w-4" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setNavSections((s) => ({ ...s, youboom: !s.youboom }))}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+            >
+              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Sparkles className="h-4 w-4 text-accent" />
+                youboom迭代
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youboom ? '' : '-rotate-90'}`}
+              />
+            </button>
+            {navSections.youboom && (
+              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+                <button
+                  type="button"
+                  onClick={() => openIterationRecord('youboom')}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'iterationRecord' && iterationRecordScope === 'youboom'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <GitBranch
+                      className={`h-4 w-4 ${
+                        activeModule === 'iterationRecord' && iterationRecordScope === 'youboom'
+                          ? 'text-accent'
+                          : 'text-gray-400'
+                      }`}
+                    />
+                    迭代记录
+                  </span>
+                  {activeModule === 'iterationRecord' && iterationRecordScope === 'youboom' ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, youboom: true }));
+                    selectModule('rewardManagement');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'rewardManagement'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <Gift
+                      className={`h-4 w-4 ${activeModule === 'rewardManagement' ? 'text-accent' : 'text-gray-400'}`}
+                    />
+                    奖励管理
+                  </span>
+                  {activeModule === 'rewardManagement' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, youboom: true }));
+                    selectModule('youboomTeam');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'youboomTeam'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <Users
+                      className={`h-4 w-4 ${activeModule === 'youboomTeam' ? 'text-accent' : 'text-gray-400'}`}
+                    />
+                    团队数据
+                  </span>
+                  {activeModule === 'youboomTeam' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setNavSections((s) => ({ ...s, mentor: !s.mentor }))}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+            >
+              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <UsersRound className="h-4 w-4 text-accent" />
+                导师迭代
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentor ? '' : '-rotate-90'}`}
+              />
+            </button>
+            {navSections.mentor && (
+              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+                <button
+                  type="button"
+                  onClick={() => openIterationRecord('mentor')}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'iterationRecord' && iterationRecordScope === 'mentor'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <GitBranch
+                      className={`h-4 w-4 ${
+                        activeModule === 'iterationRecord' && iterationRecordScope === 'mentor'
+                          ? 'text-accent'
+                          : 'text-gray-400'
+                      }`}
+                    />
+                    迭代记录
+                  </span>
+                  {activeModule === 'iterationRecord' && iterationRecordScope === 'mentor' ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNavSections((s) => ({ ...s, mentorOrg: !s.mentorOrg }))}
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+                >
+                  <span className="flex items-center gap-2 normal-case text-gray-700">
+                    <Building2 className="h-3.5 w-3.5 text-accent" />
+                    组织管理
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorOrg ? '' : '-rotate-90'}`}
+                  />
+                </button>
+                {navSections.mentorOrg && (
+                  <div className="mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNavSections((s) => ({ ...s, mentor: true, mentorOrg: true }));
+                        selectModule('sectManagement');
+                      }}
+                      className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'sectManagement' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Shield
+                          className={`h-4 w-4 ${activeModule === 'sectManagement' ? 'text-accent' : 'text-gray-400'}`}
+                        />
+                        门派管理
+                      </span>
+                      {activeModule === 'sectManagement' ? <ChevronRight className="h-4 w-4" /> : null}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNavSections((s) => ({ ...s, mentor: true, mentorOrg: true }));
+                        selectModule('customerServiceManagement');
+                      }}
+                      className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'customerServiceManagement'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Headphones
+                          className={`h-4 w-4 ${
+                            activeModule === 'customerServiceManagement' ? 'text-accent' : 'text-gray-400'
+                          }`}
+                        />
+                        客服管理
+                      </span>
+                      {activeModule === 'customerServiceManagement' ? <ChevronRight className="h-4 w-4" /> : null}
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNavSections((s) => ({ ...s, mentorAudit: !s.mentorAudit }))}
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+                >
+                  <span className="flex items-center gap-2 normal-case text-gray-700">
+                    <ClipboardCheck className="h-3.5 w-3.5 text-accent" />
+                    客服审核中心
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorAudit ? '' : '-rotate-90'}`}
+                  />
+                </button>
+                {navSections.mentorAudit && (
+                  <div className="mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNavSections((s) => ({ ...s, mentor: true, mentorAudit: true }));
+                        selectModule('auditEntryWorkbench');
+                      }}
+                      className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'auditEntryWorkbench'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileSearch
+                          className={`h-4 w-4 ${
+                            activeModule === 'auditEntryWorkbench' ? 'text-accent' : 'text-gray-400'
+                          }`}
+                        />
+                        录入审核
+                      </span>
+                      {activeModule === 'auditEntryWorkbench' ? <ChevronRight className="h-4 w-4" /> : null}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNavSections((s) => ({ ...s, mentor: true, mentorAudit: true }));
+                        selectModule('auditMessageNotification');
+                      }}
+                      className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'auditMessageNotification'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Bell
+                          className={`h-4 w-4 ${
+                            activeModule === 'auditMessageNotification' ? 'text-accent' : 'text-gray-400'
+                          }`}
+                        />
+                        消息通知
+                      </span>
+                      {activeModule === 'auditMessageNotification' ? <ChevronRight className="h-4 w-4" /> : null}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setNavSections((s) => ({ ...s, system: !s.system }))}
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
+            >
+              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Settings className="h-4 w-4 text-accent" />
+                系统配置
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.system ? '' : '-rotate-90'}`}
+              />
+            </button>
+            {navSections.system && (
+              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+                <button
+                  type="button"
+                  onClick={() => selectModule('productStaff')}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${
+                      activeModule === 'productStaff'
+                        ? 'bg-accent/5 text-accent'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'
+                    }
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <UserCog
+                      className={`h-4 w-4 ${activeModule === 'productStaff' ? 'text-accent' : 'text-gray-400'}`}
+                    />
+                    产研人员管理
+                  </span>
+                  {activeModule === 'productStaff' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectModule('config')}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'config' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <Settings2
+                      className={`h-4 w-4 ${activeModule === 'config' ? 'text-accent' : 'text-gray-400'}`}
+                    />
+                    字段配置
+                  </span>
+                  {activeModule === 'config' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectModule('ruleDescription')}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'ruleDescription' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex items-center gap-2">
+                    <HelpCircle
+                      className={`h-4 w-4 ${activeModule === 'ruleDescription' ? 'text-accent' : 'text-gray-400'}`}
+                    />
+                    规则说明
+                  </span>
+                  {activeModule === 'ruleDescription' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
         
         <div className="p-4 border-t border-line">
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
                 AD
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-medium text-gray-900 truncate">Admin User</p>
-                <p className="text-[10px] text-gray-500 truncate">renataluoy@gmail.com</p>
+                <p className="text-xs font-medium text-gray-900 dark:text-white/85 truncate">Admin User</p>
+                <p className="text-[10px] text-gray-500 dark:text-white/45 truncate">renataluoy@gmail.com</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsDark((v) => !v)}
+              className="ml-2 shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+              title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       </aside>
 
+      <MenuRuleDescriptionModal
+        open={menuRuleModal.open}
+        navTitle={menuRuleModal.navTitle}
+        routeKeys={menuRuleModal.routeKeys}
+        onClose={closeMenuRuleModal}
+      />
+
+      <DevSaveToRepo />
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 md:px-5 md:py-5 lg:px-6">
-        <div className="mx-auto w-full max-w-none">
+      <main className="flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 md:px-5 md:py-5 lg:px-6">
+        <div className="mx-auto w-full min-w-0 max-w-none">
           {/* Header */}
+          {!hideMainPageHeader ? (
           <header className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-ink mb-2">
-                {activeModule === 'leaderboard'
-                  ? '榜单数据'
-                  : activeModule === 'recommendation'
-                    ? '首页推荐'
-                    : activeModule === 'academy'
-                      ? '学院管理'
-                      : '字段配置'}
-              </h1>
-              <p className="text-gray-500 text-sm flex items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h1 className="text-3xl font-bold tracking-tight text-ink">
+                  {activeModule === 'dashboard'
+                    ? 'Dashboard'
+                    : activeModule === 'ganttMap'
+                    ? '甘特地图'
+                    : activeModule === 'leaderboard' && leaderboardTab === 'community'
+                    ? '品牌社群榜单'
+                    : activeModule === 'recommendation'
+                      ? recommendationTab === 'brand'
+                        ? '品牌推荐'
+                        : recommendationTab === 'drama'
+                          ? '剧作推荐'
+                          : '剧作分类'
+                      : activeModule === 'academy'
+                        ? academyTab === 'academy-category'
+                          ? '分类管理'
+                          : '内容配置'
+                        : MODULE_PAGE_TITLE[activeModule] ?? '工作台'}
+                </h1>
+                {pageRuleHeaderAction.show ? (
+                  <NavRuleHintButton
+                    variant="title"
+                    active
+                    onClick={() =>
+                      openMenuRuleModalFromKeys(pageRuleHeaderAction.navTitle, pageRuleHeaderAction.routeKeys)
+                    }
+                  />
+                ) : null}
+              </div>
+              <p className="text-gray-500 dark:text-white/45 text-sm flex items-center gap-2">
                 <Info className="w-4 h-4 text-accent" />
-                {activeModule === 'leaderboard'
+                {activeModule === 'dashboard'
+                  ? '实时监控用户数据与业务指标；支持今日 / 本周 / 本月 / 自定义时间区间切换。'
+                  : activeModule === 'ganttMap'
+                  ? '按右豹迭代、youboom迭代、导师系统迭代汇总各板块迭代记录：父需求、子需求、时间线与开发人员、优先级；数据与各板块「迭代记录」一致。'
+                  : activeModule === 'leaderboard'
                   ? '实时监控各项业务收益与社群表现'
                   : activeModule === 'recommendation'
                     ? '管理首页品牌与剧作推荐内容'
                     : activeModule === 'academy'
                       ? '配置商学院分类与图文/视频内容，支撑前台学院模块展示'
-                      : '配置各业务模块数据表的字段规则与说明'}
+                      : activeModule === 'iterationRecord'
+                        ? `记录 ${ITERATION_SCOPE_LABEL[iterationRecordScope]} 下的版本迭代；支持按父需求、子需求与详细规则检索`
+                        : activeModule === 'productStaff'
+                          ? '维护产研人员名单与职称，供迭代记录中「开发人员」多选使用（本机持久化）'
+                        : activeModule === 'projectManagement'
+                          ? '维护项目档案、分类、展示开关与会员策略等配置（当前为前端演示数据）'
+                          : activeModule === 'sectManagement'
+                            ? '维护导师门派档案、介绍内容与运营数据（当前为前端演示数据）'
+                            : activeModule === 'youboomTeam'
+                              ? '统计展示 youboom 各团队团长与成员的收益及奖励数据（当前为前端演示数据）'
+                            : activeModule === 'rewardManagement'
+                              ? '维护 youboom 奖励导入、审核、打款与微信通知等流程（当前为前端演示数据）'
+                              : activeModule === 'config'
+                                ? '配置各业务模块数据表的字段规则与说明'
+                                : activeModule === 'ruleDescription'
+                                  ? '维护各菜单规则说明：本机覆盖、仓库默认与代码内置目录的优先级与同步方式'
+                                  : activeModule === 'customerServiceManagement'
+                                    ? '维护客服档案与企微二维码，供用户主档归属选择（演示）'
+                                    : activeModule === 'auditEntryWorkbench'
+                                          ? '客服审核录入与工单流转工作台（当前为前端演示数据）'
+                                          : activeModule === 'auditMessageNotification'
+                                            ? '审核相关消息与通知记录（当前为前端演示数据）'
+                                            : '请从左侧选择菜单'}
               </p>
             </div>
-
-            {activeModule === 'config' && (
-              <div className="flex w-full max-w-full flex-wrap items-end gap-3 rounded-xl border border-line bg-white px-4 py-3 shadow-sm">
-                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                  菜单名称
-                  <input
-                    type="text"
-                    value={textSearchDraft.config.menuName}
-                    onChange={(e) =>
-                      setTextSearchDraft((d) => ({ ...d, config: { ...d.config, menuName: e.target.value } }))
-                    }
-                    onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
-                    className={textFieldInputClass}
-                    placeholder="如：榜单数据"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                  路由键
-                  <input
-                    type="text"
-                    value={textSearchDraft.config.routeKey}
-                    onChange={(e) =>
-                      setTextSearchDraft((d) => ({ ...d, config: { ...d.config, routeKey: e.target.value } }))
-                    }
-                    onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
-                    className={textFieldInputClass}
-                    placeholder="leaderboard"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                  字段中文名
-                  <input
-                    type="text"
-                    value={textSearchDraft.config.fieldCnName}
-                    onChange={(e) =>
-                      setTextSearchDraft((d) => ({ ...d, config: { ...d.config, fieldCnName: e.target.value } }))
-                    }
-                    onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
-                    className={textFieldInputClass}
-                    placeholder="中文列名"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                  字段英文名
-                  <input
-                    type="text"
-                    value={textSearchDraft.config.fieldEnName}
-                    onChange={(e) =>
-                      setTextSearchDraft((d) => ({ ...d, config: { ...d.config, fieldEnName: e.target.value } }))
-                    }
-                    onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
-                    className={textFieldInputClass}
-                    placeholder="field_key"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={applyTextSearch}
-                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium shadow-sm flex items-center gap-2 cursor-pointer shrink-0"
-                >
-                  <Search className="w-4 h-4" />
-                  搜索
-                </button>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="px-4 py-2 bg-white border border-line rounded-lg hover:bg-gray-50 transition-colors text-gray-500 text-xs font-medium shadow-sm cursor-pointer shrink-0"
-                >
-                  重置
-                </button>
-              </div>
-            )}
           </header>
+          ) : null}
+
+          {(activeModule === 'config' || activeModule === 'ruleDescription') && (
+            <div className="mb-6 flex w-fit gap-1 rounded-xl bg-gray-200/50 dark:bg-white/6 p-1">
+              {PRODUCT_LINE_NAV_ORDER.map((lineId) => {
+                const Icon = systemProductLineTabIcons[lineId];
+                const isActive = systemProductLine === lineId;
+                return (
+                  <button
+                    key={lineId}
+                    type="button"
+                    onClick={() => selectSystemProductLine(lineId)}
+                    className={`
+                      relative flex cursor-pointer items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium transition-all
+                      ${isActive ? 'text-accent' : 'text-gray-500 hover:text-gray-700 dark:text-white/45 dark:hover:text-white/75'}
+                    `}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="systemProductLineTab"
+                        className="absolute inset-0 rounded-lg bg-white dark:bg-accent/20 shadow-sm"
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      {PRODUCT_LINE_TAB_LABEL[lineId]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Tabs */}
-          {activeModule !== 'config' && (
+          {showDataTabs && (
             <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl mb-6 w-fit">
               {activeModule === 'leaderboard' ? (
                 [
@@ -952,16 +2009,93 @@ export default function App() {
           {/* Content Area */}
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeModule}-${leaderboardTab}-${recommendationTab}-${academyTab}`}
+              key={`${activeModule}-${ganttProductLine}-${iterationRecordScope}-${leaderboardTab}-${recommendationTab}-${academyTab}-${systemProductLine}-${projectMgmtCategoryFilter}-${projectMgmtStatusFilter}-${textSearchApplied.projectMgmt.keyword}-${textSearchApplied.iterationRecord.title}-${textSearchApplied.iterationRecord.content}-${textSearchApplied.productStaff.name}-${textSearchApplied.sectGuild.keyword}-${rewardMgmtSearchApplied.businessType}-${rewardMgmtSearchApplied.projectName}-${rewardMgmtSearchApplied.userId}-${rewardMgmtSearchApplied.auditStatus}-${rewardMgmtSearchApplied.paymentStatus}-${rewardMgmtSearchApplied.importDateStart}-${rewardMgmtSearchApplied.importDateEnd}-${youboomTeamSearchApplied.leaderId}-${youboomTeamSortField}-${youboomTeamSortOrder}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="bg-white border border-line rounded-2xl shadow-sm"
+              className={`${contentShellClass} min-w-0 max-w-full`}
             >
-              {activeModule !== 'config' && (
+              {showTableToolbar && (
                 <div className="border-b border-line">
                   <div className="flex flex-wrap items-end gap-3 px-4 py-3 lg:px-5">
+                  {activeModule === 'config' && (
+                    <>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        菜单名称
+                        <input
+                          type="text"
+                          value={textSearchDraft.config.menuName}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({ ...d, config: { ...d.config, menuName: e.target.value } }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="如：榜单数据"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        路由键
+                        <input
+                          type="text"
+                          value={textSearchDraft.config.routeKey}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({ ...d, config: { ...d.config, routeKey: e.target.value } }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="leaderboard"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        字段中文名
+                        <input
+                          type="text"
+                          value={textSearchDraft.config.fieldCnName}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({
+                              ...d,
+                              config: { ...d.config, fieldCnName: e.target.value },
+                            }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="中文列名"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        字段英文名
+                        <input
+                          type="text"
+                          value={textSearchDraft.config.fieldEnName}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({
+                              ...d,
+                              config: { ...d.config, fieldEnName: e.target.value },
+                            }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="field_key"
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {activeModule === 'ruleDescription' && (
+                    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                      菜单标题 / 路由键
+                      <input
+                        type="text"
+                        value={ruleDescSearchDraft}
+                        onChange={(e) => setRuleDescSearchDraft(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                        className={textFieldInputClass}
+                        placeholder="按菜单标题或路由键筛选"
+                      />
+                    </label>
+                  )}
+
                   {activeModule === 'leaderboard' && leaderboardTab !== 'community' && (
                     <>
                       <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
@@ -1345,6 +2479,255 @@ export default function App() {
                     </>
                   )}
 
+                  {activeModule === 'iterationRecord' && (
+                    <>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        父需求 / 子需求
+                        <input
+                          type="text"
+                          value={textSearchDraft.iterationRecord.title}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({
+                              ...d,
+                              iterationRecord: { ...d.iterationRecord, title: e.target.value },
+                            }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="按父需求或子需求描述筛选"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        详细规则
+                        <input
+                          type="text"
+                          value={textSearchDraft.iterationRecord.content}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({
+                              ...d,
+                              iterationRecord: { ...d.iterationRecord, content: e.target.value },
+                            }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="按详细规则 / 其他说明纯文本筛选"
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {activeModule === 'productStaff' && (
+                    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                      名字
+                      <input
+                        type="text"
+                        value={textSearchDraft.productStaff.name}
+                        onChange={(e) =>
+                          setTextSearchDraft((d) => ({
+                            ...d,
+                            productStaff: { ...d.productStaff, name: e.target.value },
+                          }))
+                        }
+                        onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                        className={textFieldInputClass}
+                        placeholder="按名字筛选"
+                      />
+                    </label>
+                  )}
+
+                  {activeModule === 'projectManagement' && (
+                    <>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        关键词
+                        <input
+                          type="text"
+                          value={textSearchDraft.projectMgmt.keyword}
+                          onChange={(e) =>
+                            setTextSearchDraft((d) => ({
+                              ...d,
+                              projectMgmt: { ...d.projectMgmt, keyword: e.target.value },
+                            }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="项目ID / 标题"
+                        />
+                      </label>
+                      <select
+                        value={projectMgmtCategoryFilter}
+                        onChange={(e) => {
+                          setProjectMgmtCategoryFilter(e.target.value as typeof projectMgmtCategoryFilter);
+                          setCurrentPage(1);
+                        }}
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">全部分类</option>
+                        {(Object.keys(PROJECT_CATEGORY_LABEL) as (keyof typeof PROJECT_CATEGORY_LABEL)[]).map(
+                          (k) => (
+                            <option key={k} value={k}>
+                              {PROJECT_CATEGORY_LABEL[k]}
+                            </option>
+                          )
+                        )}
+                      </select>
+                      <select
+                        value={projectMgmtStatusFilter}
+                        onChange={(e) => {
+                          setProjectMgmtStatusFilter(e.target.value as typeof projectMgmtStatusFilter);
+                          setCurrentPage(1);
+                        }}
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">项目状态</option>
+                        <option value="show">显示</option>
+                        <option value="hide">隐藏</option>
+                      </select>
+                    </>
+                  )}
+
+                  {activeModule === 'sectManagement' && (
+                    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                      关键词
+                      <input
+                        type="text"
+                        value={textSearchDraft.sectGuild.keyword}
+                        onChange={(e) =>
+                          setTextSearchDraft((d) => ({
+                            ...d,
+                            sectGuild: { ...d.sectGuild, keyword: e.target.value },
+                          }))
+                        }
+                        onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                        className={textFieldInputClass}
+                        placeholder="门派名称 / 负责人"
+                      />
+                    </label>
+                  )}
+
+                  {activeModule === 'youboomTeam' && (
+                    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                      团长ID
+                      <input
+                        type="text"
+                        value={youboomTeamSearchDraft.leaderId}
+                        onChange={(e) =>
+                          setYouboomTeamSearchDraft((d) => ({ ...d, leaderId: e.target.value }))
+                        }
+                        onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                        className={textFieldInputClass}
+                        placeholder="精确匹配团长ID"
+                      />
+                    </label>
+                  )}
+
+                  {activeModule === 'rewardManagement' && (
+                    <>
+                      {/* 文本框优先 */}
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        项目名称
+                        <input
+                          type="text"
+                          value={rewardMgmtSearchDraft.projectName}
+                          onChange={(e) =>
+                            setRewardMgmtSearchDraft((d) => ({ ...d, projectName: e.target.value }))
+                          }
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="模糊匹配项目名称"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        用户ID
+                        <input
+                          type="text"
+                          value={rewardMgmtSearchDraft.userId}
+                          onChange={(e) => setRewardMgmtSearchDraft((d) => ({ ...d, userId: e.target.value }))}
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="用户ID"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        关键词/口令
+                        <input
+                          type="text"
+                          value={rewardMgmtSearchDraft.keyword ?? ''}
+                          onChange={(e) => setRewardMgmtSearchDraft((d) => ({ ...d, keyword: e.target.value }))}
+                          onKeyDown={(e) => e.key === 'Enter' && applyTextSearch()}
+                          className={textFieldInputClass}
+                          placeholder="关键词或口令"
+                        />
+                      </label>
+                      {/* 下拉选择 */}
+                      <select
+                        value={rewardMgmtSearchDraft.businessType}
+                        onChange={(e) =>
+                          setRewardMgmtSearchDraft((d) => ({
+                            ...d,
+                            businessType: e.target.value as typeof d.businessType,
+                          }))
+                        }
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">业务类型</option>
+                        <option value="brand">{REWARD_BUSINESS_LABEL.brand}</option>
+                        <option value="overseas">{REWARD_BUSINESS_LABEL.overseas}</option>
+                      </select>
+                      <select
+                        value={rewardMgmtSearchDraft.auditStatus}
+                        onChange={(e) =>
+                          setRewardMgmtSearchDraft((d) => ({
+                            ...d,
+                            auditStatus: e.target.value as typeof d.auditStatus,
+                          }))
+                        }
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">审核状态</option>
+                        <option value="pending_review">{REWARD_AUDIT_LABEL.pending_review}</option>
+                        <option value="reviewed">{REWARD_AUDIT_LABEL.reviewed}</option>
+                        <option value="rejected">{REWARD_AUDIT_LABEL.rejected}</option>
+                      </select>
+                      <select
+                        value={rewardMgmtSearchDraft.paymentStatus}
+                        onChange={(e) =>
+                          setRewardMgmtSearchDraft((d) => ({
+                            ...d,
+                            paymentStatus: e.target.value as typeof d.paymentStatus,
+                          }))
+                        }
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">打款状态</option>
+                        <option value="pending_payment">{REWARD_PAYMENT_LABEL.pending_payment}</option>
+                        <option value="paid">{REWARD_PAYMENT_LABEL.paid}</option>
+                      </select>
+                      {/* 日期范围 */}
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        导入时间起
+                        <input
+                          type="date"
+                          value={rewardMgmtSearchDraft.importDateStart}
+                          onChange={(e) =>
+                            setRewardMgmtSearchDraft((d) => ({ ...d, importDateStart: e.target.value }))
+                          }
+                          className="min-w-[140px] cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                        导入时间止
+                        <input
+                          type="date"
+                          value={rewardMgmtSearchDraft.importDateEnd}
+                          onChange={(e) =>
+                            setRewardMgmtSearchDraft((d) => ({ ...d, importDateEnd: e.target.value }))
+                          }
+                          className="min-w-[140px] cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                        />
+                      </label>
+                    </>
+                  )}
+
                   <button
                     type="button"
                     onClick={applyTextSearch}
@@ -1364,7 +2747,12 @@ export default function App() {
 
                   {((activeModule === 'academy' && academyTab === 'academy-content') ||
                     (activeModule === 'academy' && academyTab === 'academy-category') ||
-                    (activeModule === 'recommendation' && recommendationTab === 'category')) && (
+                    (activeModule === 'recommendation' && recommendationTab === 'category') ||
+                    activeModule === 'projectManagement' ||
+                    activeModule === 'sectManagement' ||
+                    activeModule === 'iterationRecord' ||
+                    activeModule === 'productStaff' ||
+                    activeModule === 'rewardManagement') && (
                     <div className="flex flex-wrap items-center gap-3 border-t border-line/80 bg-gray-50/40 px-4 py-3 lg:px-5">
                       {activeModule === 'academy' && academyTab === 'academy-content' && (
                         <>
@@ -1517,11 +2905,201 @@ export default function App() {
                           新增分类
                         </button>
                       )}
+
+                      {activeModule === 'projectManagement' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSideDrawer({
+                              variant: 'project-management',
+                              editingId: null,
+                              form: emptyProjectManagementForm(),
+                            });
+                          }}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent/90"
+                        >
+                          <Plus className="h-4 w-4" />
+                          新增项目
+                        </button>
+                      )}
+
+                      {activeModule === 'sectManagement' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSideDrawer({
+                              variant: 'sect-guild',
+                              editingId: null,
+                              form: emptySectGuildForm(),
+                            });
+                          }}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent/90"
+                        >
+                          <Plus className="h-4 w-4" />
+                          新增门派
+                        </button>
+                      )}
+
+                      {activeModule === 'iterationRecord' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSideDrawer({
+                              variant: 'iteration-record',
+                              editingId: null,
+                              scope: iterationRecordScope,
+                              form: emptyIterationRecordForm(),
+                            });
+                          }}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent/90"
+                        >
+                          <Plus className="h-4 w-4" />
+                          新增记录
+                        </button>
+                      )}
+
+                      {activeModule === 'productStaff' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSideDrawer({
+                              variant: 'product-staff',
+                              editingId: null,
+                              form: emptyProductStaffForm(),
+                            });
+                          }}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent/90"
+                        >
+                          <Plus className="h-4 w-4" />
+                          新增人员
+                        </button>
+                      )}
+
+                      {activeModule === 'rewardManagement' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setRewardImportDrawerOpen(true)}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            批量导入
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (rewardMgmtSelectedIds.length === 0) {
+                                alert('请先勾选记录');
+                                return;
+                              }
+                              const ts = new Date().toISOString();
+                              setRewardMgmtRows((prev) =>
+                                prev.map((r) =>
+                                  rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review'
+                                    ? { ...r, auditStatus: 'reviewed', reviewer: 'Admin User', reviewedAt: ts }
+                                    : r
+                                )
+                              );
+                              setRewardMgmtSelectedIds([]);
+                            }}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            批量审核通过
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (rewardMgmtSelectedIds.length === 0) {
+                                alert('请先勾选记录');
+                                return;
+                              }
+                              const toRevert = rewardMgmtRows.filter(
+                                (r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'reviewed'
+                              );
+                              if (toRevert.length === 0) {
+                                alert('批量审核驳回仅对已审核记录生效。');
+                                return;
+                              }
+                              setRewardRejectModalOpen(true);
+                            }}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            批量审核驳回
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (rewardMgmtSelectedIds.length === 0) {
+                                alert('请先勾选记录');
+                                return;
+                              }
+                              const ts = new Date().toISOString();
+                              setRewardMgmtRows((prev) =>
+                                prev.map((r) =>
+                                  rewardMgmtSelectedIds.includes(r.id) &&
+                                  r.auditStatus === 'reviewed' &&
+                                  r.paymentStatus === 'pending_payment'
+                                    ? { ...r, paymentStatus: 'paid', payer: 'Admin User', paidAt: ts }
+                                    : r
+                                )
+                              );
+                              setRewardMgmtSelectedIds([]);
+                            }}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            批量打款
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => exportRewardMgmtExcel(filteredRewardMgmtRows)}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            导出数据
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRewardPaymentQueueOpen(true)}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            打款任务队列
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (rewardMgmtSelectedIds.length === 0) {
+                                alert('请先勾选记录');
+                                return;
+                              }
+                              setRewardMgmtRows((prev) =>
+                                prev.map((r) =>
+                                  rewardMgmtSelectedIds.includes(r.id)
+                                    ? { ...r, wechatNotify: 'sent' as const }
+                                    : r
+                                )
+                              );
+                              setRewardMgmtSelectedIds([]);
+                            }}
+                            className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                          >
+                            批量发送微信通知
+                          </button>
+                        </>
+                      )}
+
                     </div>
                   )}
                 </div>
               )}
-              {activeModule === 'leaderboard' ? (
+              {activeModule === 'dashboard' ? (
+                <DashboardPage />
+              ) : activeModule === 'ganttMap' ? (
+                <GanttMapPage
+                  iterationRows={iterationRecordRows}
+                  staffNameById={iterationStaffNameById}
+                  productLine={ganttProductLine}
+                  onProductLineChange={setGanttProductLine}
+                  onBarRangeCommit={commitGanttBarRange}
+                />
+              ) : activeModule === 'leaderboard' ? (
                 leaderboardTab === 'community' ? (
                   <CommunityTable 
                     data={filteredCommunityData} 
@@ -1651,7 +3229,112 @@ export default function App() {
                     onPreview={setContentPreview}
                   />
                 )
-              ) : (
+              ) : activeModule === 'projectManagement' ? (
+                <ProjectManagementTable
+                  data={filteredProjectMgmtRows}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  getRule={(field) => projectMgmtFieldRules[field] ?? '项目管理列表字段'}
+                  onEdit={(row) => {
+                    setSideDrawer({
+                      variant: 'project-management',
+                      editingId: row.id,
+                      form: rowToForm(row),
+                    });
+                  }}
+                />
+              ) : activeModule === 'sectManagement' ? (
+                <SectGuildTable
+                  data={filteredSectGuildRows}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  onEdit={(row) => {
+                    setSideDrawer({
+                      variant: 'sect-guild',
+                      editingId: row.id,
+                      form: rowToSectGuildForm(row),
+                    });
+                  }}
+                  onDelete={(row) => {
+                    if (!window.confirm(`确定删除门派「${row.name}」？`)) return;
+                    setSectGuildRows((prev) => prev.filter((r) => r.id !== row.id));
+                  }}
+                />
+              ) : activeModule === 'customerServiceManagement' ? (
+                <CustomerServiceManagementPage />
+              ) : activeModule === 'auditEntryWorkbench' ? (
+                <EntryAuditWorkbenchPage />
+              ) : activeModule === 'auditMessageNotification' ? (
+                <MessageNotificationRecordsPage />
+              ) : activeModule === 'productStaff' ? (
+                <ProductStaffTable
+                  data={filteredProductStaffRows}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  onEdit={(row) => {
+                    setSideDrawer({
+                      variant: 'product-staff',
+                      editingId: row.id,
+                      form: rowToProductStaffForm(row),
+                    });
+                  }}
+                  onDelete={(row) => {
+                    if (!window.confirm(`确定删除产研人员「${row.name}」？`)) return;
+                    setProductStaffRows((prev) => prev.filter((r) => r.id !== row.id));
+                  }}
+                />
+              ) : activeModule === 'iterationRecord' ? (
+                <IterationRecordTable
+                  data={filteredIterationRecordRows}
+                  staffNameById={iterationStaffNameById}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  onEdit={(row) => {
+                    setSideDrawer({
+                      variant: 'iteration-record',
+                      editingId: row.id,
+                      scope: row.scope,
+                      form: rowToIterationForm(row),
+                    });
+                  }}
+                  onDelete={(row) => {
+                    const label = row.parentRequirement.trim().slice(0, 48) || row.id;
+                    if (!window.confirm(`确定删除迭代记录「${label}」？`)) return;
+                    setIterationRecordRows((prev) => prev.filter((r) => r.id !== row.id));
+                  }}
+                />
+              ) : activeModule === 'youboomTeam' ? (
+                <YouboomTeamTable
+                  data={filteredYouboomTeamRows}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  sortField={youboomTeamSortField}
+                  sortOrder={youboomTeamSortOrder}
+                  onSort={handleYouboomTeamSort}
+                  getRule={(field) => getFieldRule('youboom-team', field)}
+                />
+              ) : activeModule === 'rewardManagement' ? (
+                <RewardManagementTable
+                  data={filteredRewardMgmtRows}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  selectedIds={rewardMgmtSelectedIds}
+                  onSelectionChange={setRewardMgmtSelectedIds}
+                  getRule={(field) => getFieldRule('reward-management', field)}
+                />
+              ) : activeModule === 'config' ? (
                 <FieldConfigTable 
                   data={filteredConfigData}
                   currentPage={currentPage}
@@ -1692,6 +3375,19 @@ export default function App() {
                     setEditingFieldId(null);
                   }}
                 />
+              ) : activeModule === 'ruleDescription' ? (
+                <div className="p-4 sm:p-5">
+                  <RuleDescriptionPage
+                    productLine={systemProductLine}
+                    filterKeyword={ruleDescSearchApplied}
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+                  <Sparkles className="h-12 w-12 text-accent/40" />
+                  <p className="text-base font-medium text-gray-800">请选择功能</p>
+                  <p className="max-w-md text-sm text-gray-500">从左侧导航进入具体模块。</p>
+                </div>
               )}
             </motion.div>
           </AnimatePresence>
@@ -1714,18 +3410,71 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className={`fixed top-0 right-0 h-full bg-white shadow-2xl z-50 flex flex-col ${
-                sideDrawer.variant === 'academy-content' ? 'w-[min(100vw,480px)]' : 'w-[min(100vw,400px)]'
+              className={`fixed inset-y-0 right-0 z-50 flex min-h-0 flex-col bg-white shadow-2xl ${
+                sideDrawer.variant === 'project-management' || sideDrawer.variant === 'iteration-record'
+                  ? 'min-w-[420px] max-w-[100vw]'
+                  : sideDrawer.variant === 'sect-guild'
+                    ? 'w-[min(100vw,560px)]'
+                    : sideDrawer.variant === 'academy-content'
+                      ? 'w-[min(100vw,480px)]'
+                      : 'w-[min(100vw,400px)]'
               }`}
+              style={
+                sideDrawer.variant === 'project-management'
+                  ? { width: clampPmDrawerWidth(projectMgmtDrawerWidth) }
+                  : sideDrawer.variant === 'iteration-record'
+                    ? { width: clampPmDrawerWidth(iterationRecordDrawerWidth) }
+                    : undefined
+              }
             >
-              <div className="p-6 border-b border-line flex items-center justify-between shrink-0">
-                <h2 className="text-lg font-bold">
+              {(sideDrawer.variant === 'project-management' || sideDrawer.variant === 'iteration-record') && (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="拖动调整抽屉宽度"
+                  title="拖动调整宽度"
+                  className="absolute left-0 top-0 z-[60] flex h-full w-3 cursor-ew-resize touch-none select-none items-center justify-center border-r border-transparent hover:border-accent/25 hover:bg-gray-100/90"
+                  onPointerDown={(e) =>
+                    onResizableDrawerResizePointerDown(
+                      e,
+                      sideDrawer.variant === 'project-management' ? 'project-management' : 'iteration-record'
+                    )
+                  }
+                  onPointerMove={onResizableDrawerResizePointerMove}
+                  onPointerUp={onResizableDrawerResizePointerUp}
+                  onPointerCancel={onResizableDrawerResizePointerUp}
+                >
+                  <GripVertical className="pointer-events-none h-5 w-5 text-gray-300" aria-hidden />
+                </div>
+              )}
+              <div
+                className={`border-b border-line flex items-center justify-between shrink-0 ${
+                  sideDrawer.variant === 'project-management' || sideDrawer.variant === 'iteration-record'
+                    ? 'pl-10 pr-3 py-3.5'
+                    : 'p-6'
+                }`}
+              >
+                <h2
+                  className={`font-bold ${
+                    sideDrawer.variant === 'project-management' || sideDrawer.variant === 'iteration-record'
+                      ? 'text-base'
+                      : 'text-lg'
+                  }`}
+                >
                   {sideDrawer.variant === 'drama-category' &&
                     (sideDrawer.editingId ? '编辑剧作分类' : '新增剧作分类')}
                   {sideDrawer.variant === 'academy-category' &&
                     (sideDrawer.editingId ? '编辑商学院分类' : '新增商学院分类')}
                   {sideDrawer.variant === 'academy-content' &&
                     (sideDrawer.editingId ? '编辑商学院内容' : '新增商学院内容')}
+                  {sideDrawer.variant === 'project-management' &&
+                    (sideDrawer.editingId ? '编辑项目' : '新增项目')}
+                  {sideDrawer.variant === 'iteration-record' &&
+                    (sideDrawer.editingId ? '编辑迭代记录' : '新增迭代记录')}
+                  {sideDrawer.variant === 'product-staff' &&
+                    (sideDrawer.editingId ? '编辑产研人员' : '新增产研人员')}
+                  {sideDrawer.variant === 'sect-guild' &&
+                    (sideDrawer.editingId ? '编辑门派' : '新增门派')}
                 </h2>
                 <button
                   type="button"
@@ -1736,7 +3485,15 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div
+                className={
+                  sideDrawer.variant === 'project-management'
+                    ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4'
+                    : sideDrawer.variant === 'iteration-record'
+                      ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-6'
+                      : 'min-h-0 flex-1 overflow-y-auto p-6 space-y-6'
+                }
+              >
                 {sideDrawer.variant === 'drama-category' && (
                   <>
                     <div className="space-y-2">
@@ -2205,7 +3962,7 @@ export default function App() {
                             内容
                             <span className="text-red-500">*</span>
                           </label>
-                          <AcademyRichTextEditor
+                          <RichTextEditor
                             value={sideDrawer.form.content}
                             onChange={(html) =>
                               setSideDrawer((d) =>
@@ -2275,13 +4032,68 @@ export default function App() {
                     </div>
                   </>
                 )}
+
+                {sideDrawer.variant === 'project-management' && (
+                  <ProjectManagementDrawerFields
+                    form={sideDrawer.form}
+                    onPatch={(p) =>
+                      setSideDrawer((d) =>
+                        d?.variant === 'project-management' ? { ...d, form: { ...d.form, ...p } } : d
+                      )
+                    }
+                    memberTypeOptions={memberTypeNames}
+                  />
+                )}
+
+                {sideDrawer.variant === 'iteration-record' && (
+                  <Fragment key={sideDrawer.editingId ?? 'new-iteration-record'}>
+                    <IterationRecordDrawerFields
+                      form={sideDrawer.form}
+                      staffOptions={iterationStaffOptions}
+                      onPatch={(p) =>
+                        setSideDrawer((d) =>
+                          d?.variant === 'iteration-record' ? { ...d, form: { ...d.form, ...p } } : d
+                        )
+                      }
+                    />
+                  </Fragment>
+                )}
+
+                {sideDrawer.variant === 'product-staff' && (
+                  <ProductStaffDrawerFields
+                    form={sideDrawer.form}
+                    onPatch={(p) =>
+                      setSideDrawer((d) =>
+                        d?.variant === 'product-staff' ? { ...d, form: { ...d.form, ...p } } : d
+                      )
+                    }
+                  />
+                )}
+
+                {sideDrawer.variant === 'sect-guild' && (
+                  <SectGuildDrawerFields
+                    form={sideDrawer.form}
+                    onPatch={(p) =>
+                      setSideDrawer((d) =>
+                        d?.variant === 'sect-guild' ? { ...d, form: { ...d.form, ...p } } : d
+                      )
+                    }
+                  />
+                )}
+
               </div>
 
-              <div className="p-6 border-t border-line flex gap-3 shrink-0">
+              <div
+                className={`mt-auto flex shrink-0 gap-3 border-t border-line bg-white ${
+                  sideDrawer.variant === 'project-management' || sideDrawer.variant === 'iteration-record'
+                    ? 'px-4 py-4'
+                    : 'p-6'
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setSideDrawer(null)}
-                  className="flex-1 px-4 py-2 border border-line rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  className="flex-1 rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
                 >
                   取消
                 </button>
@@ -2290,6 +4102,107 @@ export default function App() {
                   onClick={() => {
                     if (!sideDrawer) return;
                     const ts = new Date().toLocaleString();
+                    if (sideDrawer.variant === 'product-staff') {
+                      const f = sideDrawer.form;
+                      if (!f.name.trim()) {
+                        alert('请输入名字');
+                        return;
+                      }
+                      const id = sideDrawer.editingId ?? `ps-${Date.now()}`;
+                      const prevRow = sideDrawer.editingId
+                        ? productStaffRows.find((r) => r.id === sideDrawer.editingId) ?? null
+                        : null;
+                      const nextRow = createProductStaffRow(f, id, prevRow);
+                      if (sideDrawer.editingId) {
+                        setProductStaffRows((prev) => prev.map((r) => (r.id === id ? nextRow : r)));
+                      } else {
+                        setProductStaffRows((prev) => [...prev, nextRow]);
+                      }
+                      setSideDrawer(null);
+                      return;
+                    }
+                    if (sideDrawer.variant === 'iteration-record') {
+                      const f = sideDrawer.form;
+                      if (!f.parentRequirement.trim()) {
+                        alert('请填写父需求');
+                        return;
+                      }
+                      if (!parseIterationPriority(f.priority)) {
+                        alert('请选择优先级');
+                        return;
+                      }
+                      const scope = sideDrawer.scope;
+                      const prevRow = sideDrawer.editingId
+                        ? iterationRecordRows.find((r) => r.id === sideDrawer.editingId) ?? null
+                        : null;
+                      const id = sideDrawer.editingId ?? `ir-${Date.now()}`;
+                      const nextRow = createIterationRowFromForm(f, scope, id, prevRow);
+                      if (sideDrawer.editingId) {
+                        setIterationRecordRows((prev) => prev.map((r) => (r.id === id ? nextRow : r)));
+                      } else {
+                        setIterationRecordRows((prev) => [...prev, nextRow]);
+                      }
+                      setSideDrawer(null);
+                      return;
+                    }
+                    if (sideDrawer.variant === 'sect-guild') {
+                      const f = sideDrawer.form;
+                      if (!f.name.trim()) {
+                        alert('请输入门派名称');
+                        return;
+                      }
+                      if (!f.leaderName.trim()) {
+                        alert('请输入门派负责人');
+                        return;
+                      }
+                      const prevRow = sideDrawer.editingId
+                        ? sectGuildRows.find((r) => r.id === sideDrawer.editingId) ?? null
+                        : null;
+                      const id = sideDrawer.editingId ?? `sg-${Date.now()}`;
+                      const stats = prevRow
+                        ? {
+                            projectCount: prevRow.projectCount,
+                            mentorCount: prevRow.mentorCount,
+                            studentCount: prevRow.studentCount,
+                            totalStudentEarnings: prevRow.totalStudentEarnings,
+                            status: prevRow.status,
+                          }
+                        : {
+                            projectCount: 0,
+                            mentorCount: 0,
+                            studentCount: 0,
+                            totalStudentEarnings: 0,
+                            status: 'active' satisfies SectGuildStatus,
+                          };
+                      const nextRow = createSectGuildRowFromForm(f, id, prevRow, stats);
+                      if (sideDrawer.editingId) {
+                        setSectGuildRows((prev) => prev.map((r) => (r.id === id ? nextRow : r)));
+                      } else {
+                        setSectGuildRows((prev) => [...prev, nextRow]);
+                      }
+                      setSideDrawer(null);
+                      return;
+                    }
+                    if (sideDrawer.variant === 'project-management') {
+                      const f = sideDrawer.form;
+                      if (!f.frontTitle.trim() || !f.backTitle.trim()) {
+                        alert('请填写前端标题与后台标题');
+                        return;
+                      }
+                      if (sideDrawer.editingId) {
+                        setProjectMgmtRows((prev) =>
+                          prev.map((r) =>
+                            r.id === sideDrawer.editingId ? formToRow(f, r.id, r.seq, ts) : r
+                          )
+                        );
+                      } else {
+                        const nextSeq = Math.max(0, ...projectMgmtRows.map((r) => r.seq)) + 1;
+                        const id = `PM-${Date.now()}`;
+                        setProjectMgmtRows((prev) => [...prev, formToRow(f, id, nextSeq, ts)]);
+                      }
+                      setSideDrawer(null);
+                      return;
+                    }
                     if (sideDrawer.variant === 'drama-category') {
                       if (!sideDrawer.form.name.trim()) {
                         alert('请输入分类名称');
@@ -2401,7 +4314,7 @@ export default function App() {
                     }
                     setSideDrawer(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium shadow-sm"
+                  className="flex-1 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent/90"
                 >
                   保存
                 </button>
@@ -2651,6 +4564,40 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      <RewardBatchImportDrawer
+        open={rewardImportDrawerOpen}
+        onClose={() => setRewardImportDrawerOpen(false)}
+        importOperator="Admin User"
+        onImported={(rows) => {
+          setRewardMgmtRows((prev) => [...rows, ...prev]);
+          setCurrentPage(1);
+        }}
+      />
+      <RewardPaymentQueueDrawer open={rewardPaymentQueueOpen} onClose={() => setRewardPaymentQueueOpen(false)} />
+      <RewardRejectModal
+        open={rewardRejectModalOpen}
+        count={rewardMgmtRows.filter((r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'reviewed').length}
+        onConfirm={(reason) => {
+          setRewardMgmtRows((prev) =>
+            prev.map((r) =>
+              rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'reviewed'
+                ? {
+                    ...r,
+                    auditStatus: 'rejected' as const,
+                    rejectReason: reason,
+                    paymentStatus: 'pending_payment' as const,
+                    payer: '',
+                    paidAt: null,
+                  }
+                : r
+            )
+          );
+          setRewardMgmtSelectedIds([]);
+          setRewardRejectModalOpen(false);
+        }}
+        onCancel={() => setRewardRejectModalOpen(false)}
+      />
+
       {contentPreview && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
@@ -2714,20 +4661,39 @@ function bindScrollableAncestors(anchor: HTMLElement | null, handler: () => void
 }
 
 const tableHeadClass =
-  'px-3 py-3.5 text-left text-[14px] font-bold text-gray-900 font-sans tracking-tight align-middle whitespace-nowrap sm:px-4';
+  'px-3 py-3.5 text-left text-[14px] font-bold text-gray-900 dark:text-white/85 font-sans tracking-tight align-middle whitespace-nowrap sm:px-4';
 const tableHeadClassRight = `${tableHeadClass} text-right`;
 
 /** 表尾「操作」列：横向滚动时固定在可视区域右侧 */
 const tableHeadAction =
-  'sticky right-0 z-30 border-l border-line bg-gray-50/95 px-3 py-3.5 text-right text-[14px] font-bold text-gray-900 font-sans tracking-tight align-middle whitespace-nowrap shadow-[-10px_0_20px_-8px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:px-4';
+  'sticky right-0 z-30 border-l border-line bg-gray-50/95 dark:bg-[#181c28]/95 px-3 py-3.5 text-right text-[14px] font-bold text-gray-900 dark:text-white/85 font-sans tracking-tight align-middle whitespace-nowrap shadow-[-10px_0_20px_-8px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:px-4 relative';
 const tableCellActionBase =
-  'sticky right-0 z-20 border-l border-line bg-white px-3 py-4 text-right shadow-[-10px_0_20px_-8px_rgba(0,0,0,0.08)] group-hover:bg-gray-50 sm:px-4';
+  'sticky right-0 z-20 border-l border-line bg-white dark:bg-[#1e2232] px-3 py-4 text-right shadow-[-10px_0_20px_-8px_rgba(0,0,0,0.08)] group-hover:bg-gray-50 dark:group-hover:bg-[#252a3a] sm:px-4';
 const tableCellAction = `${tableCellActionBase} align-middle`;
 const tableCellActionTop = `${tableCellActionBase} align-top`;
 
+const APP_LB_COL_DEFAULTS: number[] = [112, 128, 96, 128, 168, 144, 128, 160];
+const APP_COMM_COL_DEFAULTS: number[] = [220, 200, 128, 120, 160];
+const APP_BRAND_COL_DEFAULTS: number[] = [96, 160, 96, 120, 120, 120, 120, 96, 140, 160];
+const APP_DRAMA_REC_COL_DEFAULTS: number[] = [120, 100, 160, 120, 140, 112, 96, 96, 160];
+const APP_ACAD_CAT_COL_DEFAULTS: number[] = [72, 160, 96, 88, 88, 88, 88, 160, 100];
+const APP_ACAD_CONTENT_COL_DEFAULTS: number[] = [44, 72, 120, 72, 160, 72, 120, 180, 88, 220, 88, 140, 120];
+const APP_DRAMA_CAT_COL_DEFAULTS: number[] = [160, 110, 220, 88, 88, 160, 108];
+const APP_FIELD_CFG_COL_DEFAULTS: number[] = [120, 140, 120, 120, 320, 100];
+
 const TOOLTIP_MAX_PX = 448;
 
-function TableHeader({ label, rule, align = 'left' }: { label: string; rule: string; align?: 'left' | 'right' }) {
+function TableHeader({
+  label,
+  rule,
+  align = 'left',
+  resizeHandle,
+}: {
+  label: string;
+  rule: string;
+  align?: 'left' | 'right';
+  resizeHandle?: ReactNode;
+}) {
   const alignRight = align === 'right';
   const iconRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -2797,7 +4763,7 @@ function TableHeader({ label, rule, align = 'left' }: { label: string; rule: str
     );
 
   return (
-    <th className={alignRight ? tableHeadClassRight : tableHeadClass}>
+    <th className={`${alignRight ? tableHeadClassRight : tableHeadClass} relative`}>
       <div className={`flex flex-nowrap items-center gap-1.5 ${alignRight ? 'justify-end' : 'justify-start'}`}>
         <span>{label}</span>
         <div
@@ -2812,6 +4778,7 @@ function TableHeader({ label, rule, align = 'left' }: { label: string; rule: str
         </div>
       </div>
       {tipPortal}
+      {resizeHandle}
     </th>
   );
 }
@@ -2824,23 +4791,38 @@ function LeaderboardTable({ data, currentPage, pageSize, onPageChange, onPageSiz
   onPageSizeChange: (size: number) => void,
   getRule: (field: string) => string
 }) {
+  const rtc = useResizableTableColumns('app-leaderboard', APP_LB_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="用户ID" rule={getRule('userId')} />
-            <TableHeader label="用户昵称" rule={getRule('nickname')} />
-            <TableHeader label="类型" rule={getRule('type')} />
-            <TableHeader label="累计收益" rule={getRule('totalEarnings')} align="right" />
-            <TableHeader label="统计维度" rule={getRule('dimension')} />
-            <TableHeader label="收益最高项目" rule={getRule('topProject')} />
-            <TableHeader label="项目收益" rule={getRule('projectEarnings')} align="right" />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
+            <TableHeader label="用户ID" rule={getRule('userId')} resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="用户昵称" rule={getRule('nickname')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="类型" rule={getRule('type')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader
+              label="累计收益"
+              rule={getRule('totalEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(3)}
+            />
+            <TableHeader label="统计维度" rule={getRule('dimension')} resizeHandle={rtc.renderResizeHandle(4)} />
+            <TableHeader label="收益最高项目" rule={getRule('topProject')} resizeHandle={rtc.renderResizeHandle(5)} />
+            <TableHeader
+              label="项目收益"
+              rule={getRule('projectEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(6)}
+            />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(7)} />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -2892,6 +4874,7 @@ function LeaderboardTable({ data, currentPage, pageSize, onPageChange, onPageSiz
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -2905,20 +4888,30 @@ function CommunityTable({ data, currentPage, pageSize, onPageChange, onPageSizeC
   onPageSizeChange: (size: number) => void,
   getRule: (field: string) => string
 }) {
+  const rtc = useResizableTableColumns('app-community', APP_COMM_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="社群名称" rule={getRule('name')} />
-            <TableHeader label="社群标签" rule={getRule('tags')} />
-            <TableHeader label="累计收益" rule={getRule('totalEarnings')} align="right" />
-            <TableHeader label="统计维度" rule={getRule('dimension')} />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
+            <TableHeader label="社群名称" rule={getRule('name')} resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="社群标签" rule={getRule('tags')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader
+              label="累计收益"
+              rule={getRule('totalEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(2)}
+            />
+            <TableHeader label="统计维度" rule={getRule('dimension')} resizeHandle={rtc.renderResizeHandle(3)} />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(4)} />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -2965,6 +4958,7 @@ function CommunityTable({ data, currentPage, pageSize, onPageChange, onPageSizeC
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -2978,25 +4972,50 @@ function BrandRecommendationTable({ data, currentPage, pageSize, onPageChange, o
   onPageSizeChange: (size: number) => void,
   getRule: (field: string) => string
 }) {
+  const rtc = useResizableTableColumns('app-brand-recommendation', APP_BRAND_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="项目ID" rule={getRule('projectId')} />
-            <TableHeader label="项目名称" rule={getRule('projectName')} />
-            <TableHeader label="项目类型" rule={getRule('projectType')} />
-            <TableHeader label="项目总收益" rule={getRule('totalEarnings')} align="right" />
-            <TableHeader label="昨日收益" rule={getRule('yesterdayEarnings')} align="right" />
-            <TableHeader label="昨日题词数量" rule={getRule('yesterdayApprovedKeywords')} align="right" />
-            <TableHeader label="热门/上新" rule="项目推荐状态标识" />
-            <TableHeader label="加权分值" rule={getRule('weightScore')} align="right" />
-            <TableHeader label="推荐日期" rule={getRule('recommendDate')} />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
+            <TableHeader label="项目ID" rule={getRule('projectId')} resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="项目名称" rule={getRule('projectName')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="项目类型" rule={getRule('projectType')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader
+              label="项目总收益"
+              rule={getRule('totalEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(3)}
+            />
+            <TableHeader
+              label="昨日收益"
+              rule={getRule('yesterdayEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(4)}
+            />
+            <TableHeader
+              label="昨日题词数量"
+              rule={getRule('yesterdayApprovedKeywords')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(5)}
+            />
+            <TableHeader label="热门/上新" rule="项目推荐状态标识" resizeHandle={rtc.renderResizeHandle(6)} />
+            <TableHeader
+              label="加权分值"
+              rule={getRule('weightScore')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(7)}
+            />
+            <TableHeader label="推荐日期" rule={getRule('recommendDate')} resizeHandle={rtc.renderResizeHandle(8)} />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(9)} />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3038,6 +5057,7 @@ function BrandRecommendationTable({ data, currentPage, pageSize, onPageChange, o
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -3051,24 +5071,39 @@ function DramaRecommendationTable({ data, currentPage, pageSize, onPageChange, o
   onPageSizeChange: (size: number) => void,
   getRule: (field: string) => string
 }) {
+  const rtc = useResizableTableColumns('app-drama-recommendation', APP_DRAMA_REC_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="所属分类" rule={getRule('category')} />
-            <TableHeader label="任务ID" rule={getRule('taskId')} />
-            <TableHeader label="任务名称" rule={getRule('taskName')} />
-            <TableHeader label="任务来源" rule={getRule('taskSource')} />
-            <TableHeader label="项目名称" rule={getRule('projectName')} />
-            <TableHeader label="今日预估收益" rule={getRule('todayEstimatedEarnings')} align="right" />
-            <TableHeader label="热门/上新" rule="剧作推荐状态标识" />
-            <TableHeader label="加权分值" rule={getRule('weightScore')} align="right" />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
+            <TableHeader label="所属分类" rule={getRule('category')} resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="任务ID" rule={getRule('taskId')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="任务名称" rule={getRule('taskName')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader label="任务来源" rule={getRule('taskSource')} resizeHandle={rtc.renderResizeHandle(3)} />
+            <TableHeader label="项目名称" rule={getRule('projectName')} resizeHandle={rtc.renderResizeHandle(4)} />
+            <TableHeader
+              label="今日预估收益"
+              rule={getRule('todayEstimatedEarnings')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(5)}
+            />
+            <TableHeader label="热门/上新" rule="剧作推荐状态标识" resizeHandle={rtc.renderResizeHandle(6)} />
+            <TableHeader
+              label="加权分值"
+              rule={getRule('weightScore')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(7)}
+            />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(8)} />
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3102,6 +5137,7 @@ function DramaRecommendationTable({ data, currentPage, pageSize, onPageChange, o
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -3225,93 +5261,6 @@ function AcademyVideoUploadField({
         </div>
       </div>
       {hint ? <p className="text-[10px] text-gray-400">{hint}</p> : null}
-    </div>
-  );
-}
-
-function AcademyRichTextEditor({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (html: string) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const skipEmit = useRef(false);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (document.activeElement === el) return;
-    const next = value || '<p><br></p>';
-    if (el.innerHTML === next) return;
-    skipEmit.current = true;
-    el.innerHTML = next;
-    skipEmit.current = false;
-  }, [value]);
-
-  const emit = () => {
-    const el = ref.current;
-    if (!el || skipEmit.current) return;
-    onChange(el.innerHTML);
-  };
-
-  const run = (command: string, arg?: string) => {
-    ref.current?.focus();
-    document.execCommand(command, false, arg);
-    emit();
-  };
-
-  const addLink = () => {
-    const url = window.prompt('请输入链接地址（含 http/https）');
-    if (!url) return;
-    run('createLink', url);
-  };
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-line">
-      <div className="flex flex-wrap gap-1 border-b border-line bg-gray-50 px-2 py-1.5">
-        <button
-          type="button"
-          title="加粗"
-          onClick={() => run('bold')}
-          className="rounded-md p-1.5 text-gray-600 hover:bg-white hover:text-ink"
-        >
-          <Bold className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          title="斜体"
-          onClick={() => run('italic')}
-          className="rounded-md p-1.5 text-gray-600 hover:bg-white hover:text-ink"
-        >
-          <Italic className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          title="无序列表"
-          onClick={() => run('insertUnorderedList')}
-          className="rounded-md p-1.5 text-gray-600 hover:bg-white hover:text-ink"
-        >
-          <List className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          title="插入链接"
-          onClick={addLink}
-          className="rounded-md p-1.5 text-gray-600 hover:bg-white hover:text-ink"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </button>
-      </div>
-      <div
-        ref={ref}
-        className="prose prose-sm min-h-[200px] max-h-[320px] max-w-none overflow-y-auto px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-accent/15 focus:ring-inset"
-        contentEditable
-        suppressContentEditableWarning
-        onInput={emit}
-        onBlur={emit}
-      />
     </div>
   );
 }
@@ -3465,6 +5414,7 @@ function AcademyCategoryTable({
   onEdit: (row: AcademyCategoryRow) => void;
   onDelete: (row: AcademyCategoryRow) => void;
 }) {
+  const rtc = useResizableTableColumns('app-academy-category', APP_ACAD_CAT_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
 
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -3473,18 +5423,30 @@ function AcademyCategoryTable({
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="ID" rule={getRule('seqId')} align="right" />
-            <TableHeader label="分类名称" rule={getRule('name')} />
-            <TableHeader label="金刚区" rule={getRule('kingkong')} />
-            <TableHeader label="icon" rule={getRule('icon')} />
-            <TableHeader label="排序" rule={getRule('sort')} align="right" />
-            <TableHeader label="状态" rule={getRule('status')} />
-            <TableHeader label="内容数" rule={getRule('contentCount')} align="right" />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
-            <th className={tableHeadAction}>操作</th>
+            <TableHeader label="ID" rule={getRule('seqId')} align="right" resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="分类名称" rule={getRule('name')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="金刚区" rule={getRule('kingkong')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader label="icon" rule={getRule('icon')} resizeHandle={rtc.renderResizeHandle(3)} />
+            <TableHeader label="排序" rule={getRule('sort')} align="right" resizeHandle={rtc.renderResizeHandle(4)} />
+            <TableHeader label="状态" rule={getRule('status')} resizeHandle={rtc.renderResizeHandle(5)} />
+            <TableHeader
+              label="内容数"
+              rule={getRule('contentCount')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(6)}
+            />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(7)} />
+            <th className={tableHeadAction}>
+              操作
+              {rtc.renderResizeHandle(8)}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3545,6 +5507,7 @@ function AcademyCategoryTable({
         currentPage={currentPage}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -3577,6 +5540,7 @@ function AcademyContentTable({
   onDelete: (row: AcademyContent) => void;
   onPreview: (p: { title: string; contentType: AcademyContent['contentType']; content: string }) => void;
 }) {
+  const rtc = useResizableTableColumns('app-academy-content', APP_ACAD_CONTENT_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
 
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -3609,10 +5573,14 @@ function AcademyContentTable({
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <th className={`${tableHeadClass} w-10`}>
+            <th className={`${tableHeadClass} relative w-10`}>
               <input
                 type="checkbox"
                 className="accent-accent rounded border-line"
@@ -3620,22 +5588,27 @@ function AcademyContentTable({
                 onChange={toggleAllPage}
                 aria-label="全选本页"
               />
+              {rtc.renderResizeHandle(0)}
             </th>
-            <TableHeader label="ID" rule={getRule('seqId')} align="right" />
-            <TableHeader label="所属右豹ID" rule={getRule('youbaoId')} />
-            <TableHeader label="封面" rule={getRule('cover')} />
-            <TableHeader label="标题" rule={getRule('title')} />
-            <TableHeader label="标签" rule={getRule('tag')} />
-            <TableHeader label="所属分类" rule={getRule('categoryId')} />
+            <TableHeader label="ID" rule={getRule('seqId')} align="right" resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="所属右豹ID" rule={getRule('youbaoId')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader label="封面" rule={getRule('cover')} resizeHandle={rtc.renderResizeHandle(3)} />
+            <TableHeader label="标题" rule={getRule('title')} resizeHandle={rtc.renderResizeHandle(4)} />
+            <TableHeader label="标签" rule={getRule('tag')} resizeHandle={rtc.renderResizeHandle(5)} />
+            <TableHeader label="所属分类" rule={getRule('categoryId')} resizeHandle={rtc.renderResizeHandle(6)} />
             <TableHeader
               label="关联项目"
               rule={`${getRule('projectName')}；${getRule('projectId')}`}
+              resizeHandle={rtc.renderResizeHandle(7)}
             />
-            <TableHeader label="内容类型" rule={getRule('contentType')} />
-            <TableHeader label="内容" rule={getRule('content')} />
-            <TableHeader label="状态" rule={getRule('status')} />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
-            <th className={tableHeadAction}>操作</th>
+            <TableHeader label="内容类型" rule={getRule('contentType')} resizeHandle={rtc.renderResizeHandle(8)} />
+            <TableHeader label="内容" rule={getRule('content')} resizeHandle={rtc.renderResizeHandle(9)} />
+            <TableHeader label="状态" rule={getRule('status')} resizeHandle={rtc.renderResizeHandle(10)} />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(11)} />
+            <th className={tableHeadAction}>
+              操作
+              {rtc.renderResizeHandle(12)}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3751,6 +5724,7 @@ function AcademyContentTable({
         currentPage={currentPage}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -3765,6 +5739,7 @@ function DramaCategoryTable({ data, currentPage, pageSize, onPageChange, onPageS
   getRule: (field: string) => string,
   onEdit: (category: DramaCategory) => void
 }) {
+  const rtc = useResizableTableColumns('app-drama-category', APP_DRAMA_CAT_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
 
   const taskTypeMap: Record<string, string> = {
@@ -3778,16 +5753,28 @@ function DramaCategoryTable({ data, currentPage, pageSize, onPageChange, onPageS
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <TableHeader label="分类名称" rule={getRule('name')} />
-            <TableHeader label="任务类型" rule={getRule('taskType')} />
-            <TableHeader label="关联业务" rule={getRule('relatedBusiness')} />
-            <TableHeader label="状态" rule={getRule('status')} />
-            <TableHeader label="分类排序" rule={getRule('sort')} align="right" />
-            <TableHeader label="更新时间" rule={getRule('updateTime')} />
-            <th className={tableHeadAction}>操作</th>
+            <TableHeader label="分类名称" rule={getRule('name')} resizeHandle={rtc.renderResizeHandle(0)} />
+            <TableHeader label="任务类型" rule={getRule('taskType')} resizeHandle={rtc.renderResizeHandle(1)} />
+            <TableHeader label="关联业务" rule={getRule('relatedBusiness')} resizeHandle={rtc.renderResizeHandle(2)} />
+            <TableHeader label="状态" rule={getRule('status')} resizeHandle={rtc.renderResizeHandle(3)} />
+            <TableHeader
+              label="分类排序"
+              rule={getRule('sort')}
+              align="right"
+              resizeHandle={rtc.renderResizeHandle(4)}
+            />
+            <TableHeader label="更新时间" rule={getRule('updateTime')} resizeHandle={rtc.renderResizeHandle(5)} />
+            <th className={tableHeadAction}>
+              操作
+              {rtc.renderResizeHandle(6)}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3835,6 +5822,7 @@ function DramaCategoryTable({ data, currentPage, pageSize, onPageChange, onPageS
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
@@ -3865,21 +5853,44 @@ function FieldConfigTable({
   onEditSave: (id: string) => void,
   onEditCancel: () => void
 }) {
+  const rtc = useResizableTableColumns('app-field-config', APP_FIELD_CFG_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="overflow-x-auto overflow-y-visible">
-      <table className="app-data-table min-w-full w-max text-left">
+      <table
+        className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
+        style={{ minWidth: rtc.tableMinWidth }}
+      >
+        {rtc.colGroup}
         <thead>
           <tr className="border-b border-line bg-gray-50/50">
-            <th className={tableHeadClass}>菜单名称</th>
-            <th className={tableHeadClass}>路由键</th>
-            <th className={tableHeadClass}>字段中文名</th>
-            <th className={tableHeadClass}>字段英文名</th>
-            <th className={tableHeadClass}>字段说明</th>
-            <th className={tableHeadAction}>操作</th>
+            <th className={`${tableHeadClass} relative`}>
+              菜单名称
+              {rtc.renderResizeHandle(0)}
+            </th>
+            <th className={`${tableHeadClass} relative`}>
+              路由键
+              {rtc.renderResizeHandle(1)}
+            </th>
+            <th className={`${tableHeadClass} relative`}>
+              字段中文名
+              {rtc.renderResizeHandle(2)}
+            </th>
+            <th className={`${tableHeadClass} relative`}>
+              字段英文名
+              {rtc.renderResizeHandle(3)}
+            </th>
+            <th className={`${tableHeadClass} relative`}>
+              字段说明
+              {rtc.renderResizeHandle(4)}
+            </th>
+            <th className={tableHeadAction}>
+              操作
+              {rtc.renderResizeHandle(5)}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -3937,72 +5948,12 @@ function FieldConfigTable({
         currentPage={currentPage} 
         onPageChange={onPageChange} 
         onPageSizeChange={onPageSizeChange}
+        pageSizes={[15, 50, 100, 500, 1000]}
       />
     </div>
   );
 }
 
-function Pagination({ total, pageSize, currentPage, onPageChange, onPageSizeChange }: { 
-  total: number, 
-  pageSize: number, 
-  currentPage: number, 
-  onPageChange: (page: number) => void,
-  onPageSizeChange: (size: number) => void
-}) {
-  const totalPages = Math.ceil(total / pageSize);
-  
-  return (
-    <div className="px-3 py-4 sm:px-4 border-t border-line flex items-center justify-between bg-gray-50/30">
-      <div className="flex items-center gap-4">
-        <p className="text-sm text-gray-600">
-          显示 {total === 0 ? 0 : (currentPage - 1) * pageSize + 1} 到 {Math.min(currentPage * pageSize, total)} 条，共 {total} 条
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-500">每页显示</span>
-          <select 
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="text-sm bg-white border border-line rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent/30 cursor-pointer"
-          >
-            {[15, 50, 100, 500, 1000].map(size => (
-              <option key={size} value={size}>{size} 条</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      {totalPages >= 1 && (
-        <div className="flex items-center gap-1">
-          <button 
-            disabled={currentPage === 1}
-            onClick={() => onPageChange(currentPage - 1)}
-            className="p-1.5 rounded border border-line bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => onPageChange(i + 1)}
-              className={`
-                w-8 h-8 rounded text-sm font-medium transition-all
-                ${currentPage === i + 1 ? 'bg-accent text-white shadow-sm' : 'bg-white border border-line text-gray-500 hover:bg-gray-50'}
-              `}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button 
-            disabled={currentPage === totalPages || totalPages === 0}
-            onClick={() => onPageChange(currentPage + 1)}
-            className="p-1.5 rounded border border-line bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function EmptyState() {
   return (

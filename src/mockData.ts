@@ -1,4 +1,7 @@
 import fieldDescriptionOverridesFile from './field-configuration-description-overrides.json';
+import _academyCategoriesSeedJson from './mock/academy-categories-seed.json';
+import _academyContentsSeedJson from './mock/academy-contents-seed.json';
+import type { ProductLine } from './pageRuleCatalog';
 
 export interface LeaderboardEntry {
   id: string;
@@ -141,6 +144,8 @@ export interface DramaCategory {
 
 export interface FieldConfiguration {
   id: string;
+  /** 业务线：与侧栏一级菜单对齐；缺省视为右豹 */
+  productLine?: ProductLine;
   menuName: string;
   routeKey: string;
   fieldEnName: string;
@@ -253,7 +258,12 @@ export interface AcademyContent {
   updateTime: string;
 }
 
-export const academyCategoryInitialData: AcademyCategory[] = [
+const _academyCategoriesFromFile = _academyCategoriesSeedJson as unknown as AcademyCategory[];
+const _academyContentsFromFile = _academyContentsSeedJson as unknown as AcademyContent[];
+
+export const academyCategoryInitialData: AcademyCategory[] = _academyCategoriesFromFile.length > 0
+  ? _academyCategoriesFromFile
+  : /* 硬编码兜底 */ [
   {
     id: 'ac-cat-1',
     seq: 1,
@@ -286,7 +296,9 @@ export const academyCategoryInitialData: AcademyCategory[] = [
   },
 ];
 
-export const academyContentInitialData: AcademyContent[] = [
+export const academyContentInitialData: AcademyContent[] = _academyContentsFromFile.length > 0
+  ? _academyContentsFromFile
+  : /* 硬编码兜底 */ [
   {
     id: 'ac-con-1',
     seq: 1,
@@ -505,7 +517,196 @@ export const fieldConfigurationDataBase: FieldConfiguration[] = [
   { id: 'f58', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'contentType', fieldCnName: '内容类型', description: '图文或视频，决定前台预览与播放方式' },
   { id: 'f59', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'content', fieldCnName: '内容', description: '图文为正文章节或富文本；视频为可播放的地址链接' },
   { id: 'f60', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'status', fieldCnName: '状态', description: '内容在前台的显示或隐藏' },
-  { id: 'f61', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'updateTime', fieldCnName: '更新时间', description: '内容最后一次保存或发布的时间' }
+  { id: 'f61', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'updateTime', fieldCnName: '更新时间', description: '内容最后一次保存或发布的时间' },
+
+  // youboom 迭代 — 字段示例（与一级菜单「youboom迭代」对应）
+  {
+    id: 'yb1',
+    productLine: 'youboom',
+    menuName: '迭代看板',
+    routeKey: 'youboom-board',
+    fieldEnName: 'releaseVersion',
+    fieldCnName: '发布版本',
+    description: '当前迭代对外展示的版本号或标签，用于与流水线制品对齐',
+  },
+  {
+    id: 'yb2',
+    productLine: 'youboom',
+    menuName: '迭代看板',
+    routeKey: 'youboom-board',
+    fieldEnName: 'owner',
+    fieldCnName: '负责人',
+    description: '该需求或看板项的研发/产品 owner，用于通知与审批',
+  },
+  {
+    id: 'yb3',
+    productLine: 'youboom',
+    menuName: '迭代看板',
+    routeKey: 'youboom-board',
+    fieldEnName: 'status',
+    fieldCnName: '状态',
+    description: '规划中 / 开发中 / 待验收 / 已上线等生命周期状态',
+  },
+  {
+    id: 'yb4',
+    productLine: 'youboom',
+    menuName: '迭代看板',
+    routeKey: 'youboom-board',
+    fieldEnName: 'priority',
+    fieldCnName: '优先级',
+    description: 'P0–P3 或与业务方约定的优先级，用于排序与资源协调',
+  },
+  {
+    id: 'yb5',
+    productLine: 'youboom',
+    menuName: '发布渠道',
+    routeKey: 'youboom-channel',
+    fieldEnName: 'channelCode',
+    fieldCnName: '渠道编码',
+    description: 'App、H5、小程序等投放或发布渠道的唯一编码',
+  },
+  {
+    id: 'yb6',
+    productLine: 'youboom',
+    menuName: '发布渠道',
+    routeKey: 'youboom-channel',
+    fieldEnName: 'rolloutPercent',
+    fieldCnName: '灰度比例',
+    description: '0–100 的百分比灰度放量，与监控大盘联动',
+  },
+  {
+    id: 'yb7',
+    productLine: 'youboom',
+    menuName: '实验配置',
+    routeKey: 'youboom-experiment',
+    fieldEnName: 'experimentKey',
+    fieldCnName: '实验键',
+    description: 'AB 实验或功能开关在配置中心的唯一键',
+  },
+  {
+    id: 'yb8',
+    productLine: 'youboom',
+    menuName: '实验配置',
+    routeKey: 'youboom-experiment',
+    fieldEnName: 'variant',
+    fieldCnName: '分组',
+    description: '对照组 / 实验组等分组标识',
+  },
+  {
+    id: 'yb9',
+    productLine: 'youboom',
+    menuName: '指标看板',
+    routeKey: 'youboom-metrics',
+    fieldEnName: 'metricCode',
+    fieldCnName: '指标编码',
+    description: '埋点或数仓中的指标英文编码，用于报表订阅',
+  },
+  {
+    id: 'yb10',
+    productLine: 'youboom',
+    menuName: '指标看板',
+    routeKey: 'youboom-metrics',
+    fieldEnName: 'aggregation',
+    fieldCnName: '聚合方式',
+    description: '求和、去重计数、人均等聚合口径说明',
+  },
+
+  {
+    id: 'mt1',
+    productLine: 'mentor',
+    menuName: '门派管理',
+    routeKey: 'sect-management',
+    fieldEnName: 'name',
+    fieldCnName: '门派名称',
+    description: '门派在列表与详情中的展示名称',
+  },
+  {
+    id: 'mt2',
+    productLine: 'mentor',
+    menuName: '门派管理',
+    routeKey: 'sect-management',
+    fieldEnName: 'leaderName',
+    fieldCnName: '掌门',
+    description: '门派负责人或对外展示的掌门昵称',
+  },
+  {
+    id: 'mt3',
+    productLine: 'mentor',
+    menuName: '门派管理',
+    routeKey: 'sect-management',
+    fieldEnName: 'status',
+    fieldCnName: '状态',
+    description: '启用或停用，控制前台是否可访问该门派',
+  },
+  {
+    id: 'mt4',
+    productLine: 'mentor',
+    menuName: '门派管理',
+    routeKey: 'sect-management',
+    fieldEnName: 'totalStudentEarnings',
+    fieldCnName: '累计学员收益',
+    description: '演示用汇总指标，实际口径以后台与数仓为准',
+  },
+
+  // 客服管理
+  { id: 'cs1', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'agentId', fieldCnName: '客服ID', description: '客服在系统中的唯一标识，用于生成专属录入链接' },
+  { id: 'cs2', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'name', fieldCnName: '客服姓名', description: '客服的展示姓名' },
+  { id: 'cs3', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'type', fieldCnName: '客服类型', description: '普通客服或付费客服，影响用户归属与权限' },
+  { id: 'cs4', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'feishuPhone', fieldCnName: '飞书手机号', description: '客服绑定的飞书账号手机号，用于消息通知触达' },
+  { id: 'cs5', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'wecomQrUrl', fieldCnName: '企微二维码', description: '客服的企业微信二维码图片，用于投放与物料绑定' },
+  { id: 'cs6', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'entryLink', fieldCnName: '专属录入链接', description: '含 agentId 的专属录入 URL，用户扫码后归属该客服' },
+  { id: 'cs7', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'userCount', fieldCnName: '已关联用户数', description: '当前归属该客服的已注册用户数（演示字段）' },
+  { id: 'cs8', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'status', fieldCnName: '状态', description: '启用时出现在归属选择中；禁用后不再对新用户展示' },
+  { id: 'cs9', productLine: 'mentor', menuName: '客服管理', routeKey: 'customer-service-management', fieldEnName: 'createdAt', fieldCnName: '创建时间', description: '客服账号的创建时间' },
+
+  // 录入审核工作台
+  { id: 'ea1', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'agentName', fieldCnName: '所属客服', description: '该录入单所归属的客服名称' },
+  { id: 'ea2', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'youbaoCode', fieldCnName: '右豹编码', description: '用户的右豹编码，录入标识唯一键' },
+  { id: 'ea3', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'youbaoId', fieldCnName: '右豹 ID', description: '用户的右豹平台账号 ID' },
+  { id: 'ea4', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'last10dKeywords', fieldCnName: '近10天关键词', description: '用户近10天在平台发布的关键词总数' },
+  { id: 'ea5', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'last10dWorks', fieldCnName: '近10天作品', description: '用户近10天发布的作品（图文/视频）总数' },
+  { id: 'ea6', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'last10dOrders', fieldCnName: '近10天订单', description: '用户近10天产生的有效订单总数' },
+  { id: 'ea7', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'last10dEarnings', fieldCnName: '近10天收益', description: '用户近10天累计收益金额（元）' },
+  { id: 'ea8', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'feishuInfo', fieldCnName: '飞书信息', description: '用户绑定的飞书手机号与飞书用户ID，审核时用于核验身份' },
+  { id: 'ea9', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'appliedAt', fieldCnName: '申请时间', description: '用户提交录入申请的时间，同时展示录入来源标识' },
+  { id: 'ea10', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'entrySource', fieldCnName: '录入来源', description: '录入来源：二维码扫码录入或后台批量导入' },
+  { id: 'ea11', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'docStatus', fieldCnName: '单据状态', description: '当前录入单的处理状态：待审核或处理中' },
+  { id: 'ea12', productLine: 'mentor', menuName: '录入审核工作台', routeKey: 'audit-entry-workbench', fieldEnName: 'processor', fieldCnName: '处理人', description: '当前单据的审核或处理操作员' },
+
+  // 消息通知记录
+  { id: 'mn1', productLine: 'mentor', menuName: '消息通知记录', routeKey: 'audit-message-notification', fieldEnName: 'notifyAt', fieldCnName: '通知时间', description: '消息推送触发的时间' },
+  { id: 'mn2', productLine: 'mentor', menuName: '消息通知记录', routeKey: 'audit-message-notification', fieldEnName: 'youbaoCode', fieldCnName: '右豹编码', description: '关联用户的右豹编码，用于定位推送对象' },
+  { id: 'mn3', productLine: 'mentor', menuName: '消息通知记录', routeKey: 'audit-message-notification', fieldEnName: 'status', fieldCnName: '推送状态', description: '推送状态：待发送 / 已推送 / 推送失败' },
+  { id: 'mn4', productLine: 'mentor', menuName: '消息通知记录', routeKey: 'audit-message-notification', fieldEnName: 'failReason', fieldCnName: '失败原因', description: '推送失败时的错误原因，如未绑定 OpenID、推送超时等' },
+
+  // 奖励管理
+  { id: 'rw1', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'orderId', fieldCnName: '订单ID', description: '系统自动生成的 16 位唯一订单标识（时间戳 13 位 + 随机 3 位）' },
+  { id: 'rw2', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'businessType', fieldCnName: '业务类型', description: '奖励所属业务线：品牌 或 海外，对应不同的校验与结算规则' },
+  { id: 'rw3', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'projectId', fieldCnName: '项目ID', description: '关联推广项目的唯一编号，须与项目名称一一对应' },
+  { id: 'rw4', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'projectName', fieldCnName: '项目名称', description: '推广项目的展示名称，须与项目ID匹配；导入时系统自动校验一致性' },
+  { id: 'rw5', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'keyword', fieldCnName: '关键词/口令', description: '用户发布内容时使用的推广关键词或口令；填写时须属于该项目的许可范围' },
+  { id: 'rw6', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'userId', fieldCnName: '用户ID', description: '接收奖励的用户在平台的唯一标识，导入时系统校验该用户是否存在' },
+  { id: 'rw7', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'amount', fieldCnName: '奖励金额', description: '本次奖励的实际打款金额（元），须为正数；打款前需经审核通过' },
+  { id: 'rw8', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'rewardTitle', fieldCnName: '奖励标题', description: '奖励的展示名称，用于用户侧平台活动钱包的记录标题；选填' },
+  { id: 'rw9', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'rewardReason', fieldCnName: '奖励事由', description: '本次发放奖励的业务说明，必填，用于审核对账与合规留存' },
+  { id: 'rw10', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'importOperator', fieldCnName: '导入操作人', description: '执行批量导入操作的后台用户姓名，系统自动记录，不可手动修改' },
+  { id: 'rw11', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'importedAt', fieldCnName: '导入时间', description: '批量导入成功时系统记录的时间戳' },
+  { id: 'rw12', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'reviewer', fieldCnName: '审核人', description: '对该条奖励记录执行审核操作的后台用户姓名' },
+  { id: 'rw13', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'reviewedAt', fieldCnName: '审核时间', description: '审核通过或驳回操作完成的时间戳' },
+  { id: 'rw14', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'rejectReason', fieldCnName: '驳回原因', description: '审核驳回时填写的原因，用于通知用户与二次提交参考；仅驳回状态下有值' },
+  { id: 'rw15', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'payer', fieldCnName: '打款人', description: '执行打款操作的后台用户姓名，系统在批量打款时自动记录' },
+  { id: 'rw16', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'paidAt', fieldCnName: '打款时间', description: '打款任务完成的时间戳；批量打款时以队列实际完成时间为准' },
+  { id: 'rw17', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'auditStatus', fieldCnName: '审核状态', description: '审核流转状态：待审核 / 已审核 / 已驳回；驳回后需重新提交' },
+  { id: 'rw18', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'paymentStatus', fieldCnName: '打款状态', description: '打款流转状态：待打款 / 已打款；仅审核通过后可发起打款' },
+  { id: 'rw19', productLine: 'youboom', menuName: '奖励管理', routeKey: 'reward-management', fieldEnName: 'wechatNotify', fieldCnName: '微信通知', description: '用户微信通知状态：待发送 / 已发送；仅已审核且已打款的记录可触发发送' },
+
+  // 团队数据
+  { id: 'yt1', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'leaderId', fieldCnName: '团长ID', description: '团队负责人在平台的唯一用户标识，与右豹用户 ID 体系保持一致' },
+  { id: 'yt2', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'leaderNickname', fieldCnName: '团长昵称', description: '团长的前台展示昵称，来源于用户资料，不可在此直接修改' },
+  { id: 'yt3', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'memberCount', fieldCnName: '团队成员数', description: '当前该团队下有效成员的总人数，支持点击列头升序/降序排列' },
+  { id: 'yt4', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'teamRevenue', fieldCnName: '团队收益', description: '团队所有成员在统计周期内产生的累计推广收益总额（元），支持排序' },
+  { id: 'yt5', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'teamReward', fieldCnName: '团队奖励', description: '系统根据团队收益按比例计算的奖励金额（元），具体比例以运营配置为准，支持排序' },
+  { id: 'yt6', productLine: 'youboom', menuName: '团队数据', routeKey: 'youboom-team', fieldEnName: 'updatedAt', fieldCnName: '更新时间', description: '本条团队数据最后一次从数据仓库同步到后台的时间' },
 ];
 
 export const fieldConfigurationDescriptionDefaults: Readonly<Record<string, string>> =

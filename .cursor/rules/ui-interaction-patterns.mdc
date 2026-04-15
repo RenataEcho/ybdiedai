@@ -1,0 +1,76 @@
+---
+description: 交互模式规范：行内操作、侧边抽屉详情、Toast 反馈、二次确认弹窗
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# 交互模式规范
+
+## 1. 列表页行内操作
+
+审核类操作（通过/拒绝）直接暴露在行内，不跳转详情页。
+
+```tsx
+// ✅ GOOD — 行内直接操作
+<Table.Column title="操作" render={(_, record) => (
+  <Space>
+    <Button size="small" type="primary" onClick={() => handleApprove(record.id)}>通过</Button>
+    <Button size="small" danger onClick={() => handleReject(record.id)}>拒绝</Button>
+    <Button size="small" type="text" onClick={() => openDetailDrawer(record)}>详情</Button>
+  </Space>
+)} />
+
+// ❌ BAD — 跳转到详情页再操作
+<Button onClick={() => navigate(`/detail/${record.id}`)}>查看</Button>
+```
+
+## 2. 侧边抽屉详情
+
+查看完整信息时从右侧滑出抽屉，保持列表上下文不丢失。
+
+```tsx
+// ✅ GOOD
+<Drawer
+  open={drawerOpen}
+  onClose={() => setDrawerOpen(false)}
+  placement="right"
+  width={560}
+  title={selectedRecord?.title}
+>
+  <DetailContent record={selectedRecord} />
+</Drawer>
+
+// ❌ BAD — 用 Modal 弹出详情（遮挡列表上下文）
+<Modal open={open} width={800}>...</Modal>
+```
+
+## 3. Toast 操作反馈
+
+每次操作完成后用轻量 message 提示，不打断流程，不用 Modal.success。
+
+```tsx
+// ✅ GOOD
+await approveEntry(id);
+message.success('审核已通过');
+
+// ❌ BAD
+Modal.success({ title: '操作成功', content: '审核已通过' });
+```
+
+## 4. 二次确认弹窗
+
+仅高风险操作触发（删除含关联数据的记录）。普通操作不需要二次确认。
+
+```tsx
+// ✅ GOOD — 仅删除时确认
+Modal.confirm({
+  title: '确认删除？',
+  content: '该记录包含关联数据，删除后不可恢复。',
+  okText: '确认删除',
+  okButtonProps: { danger: true },
+  onOk: () => handleDelete(id),
+});
+
+// ❌ BAD — 审核通过也弹确认框（低风险操作不需要）
+Modal.confirm({ title: '确认通过？', onOk: () => handleApprove(id) });
+```

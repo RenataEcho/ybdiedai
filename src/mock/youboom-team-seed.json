@@ -1,0 +1,92 @@
+[
+  {
+    "id": "yt-001",
+    "leaderId": "L10001",
+    "leaderNickname": "星耀团长A",
+    "memberCount": 128,
+    "teamRevenue": 58620.5,
+    "teamReward": 2931.03,
+    "updatedAt": "2026-04-14T10:30:00+08:00"
+  },
+  {
+    "id": "yt-002",
+    "leaderId": "L10002",
+    "leaderNickname": "钻石战队队长",
+    "memberCount": 96,
+    "teamRevenue": 43180,
+    "teamReward": 2159,
+    "updatedAt": "2026-04-14T11:00:00+08:00"
+  },
+  {
+    "id": "yt-003",
+    "leaderId": "L10003",
+    "leaderNickname": "超越极限队",
+    "memberCount": 215,
+    "teamRevenue": 102450.8,
+    "teamReward": 5122.54,
+    "updatedAt": "2026-04-14T09:15:00+08:00"
+  },
+  {
+    "id": "yt-004",
+    "leaderId": "L10004",
+    "leaderNickname": "荣耀先锋团",
+    "memberCount": 64,
+    "teamRevenue": 28900.25,
+    "teamReward": 1445.01,
+    "updatedAt": "2026-04-13T17:45:00+08:00"
+  },
+  {
+    "id": "yt-005",
+    "leaderId": "L10005",
+    "leaderNickname": "王者精英队",
+    "memberCount": 180,
+    "teamRevenue": 87340,
+    "teamReward": 4367,
+    "updatedAt": "2026-04-14T08:00:00+08:00"
+  },
+  {
+    "id": "yt-006",
+    "leaderId": "L10006",
+    "leaderNickname": "闪电突击队",
+    "memberCount": 42,
+    "teamRevenue": 19600.6,
+    "teamReward": 980.03,
+    "updatedAt": "2026-04-13T14:20:00+08:00"
+  },
+  {
+    "id": "yt-007",
+    "leaderId": "L10007",
+    "leaderNickname": "无敌铁军",
+    "memberCount": 310,
+    "teamRevenue": 145890,
+    "teamReward": 7294.5,
+    "updatedAt": "2026-04-14T12:00:00+08:00"
+  },
+  {
+    "id": "yt-008",
+    "leaderId": "L10008",
+    "leaderNickname": "飞翔追梦团",
+    "memberCount": 77,
+    "teamRevenue": 35210.75,
+    "teamReward": 1760.54,
+    "updatedAt": "2026-04-13T16:30:00+08:00"
+  },
+  {
+    "id": "yt-009",
+    "leaderId": "L10009",
+    "leaderNickname": "传奇精锐队",
+    "memberCount": 150,
+    "teamRevenue": 70050,
+    "teamReward": 3502.5,
+    "updatedAt": "2026-04-14T07:45:00+08:00"
+  },
+  {
+    "id": "yt-010",
+    "leaderId": "L10010",
+    "leaderNickname": "破晓曙光队",
+    "memberCount": 88,
+    "teamRevenue": 41200.3,
+    "teamReward": 2060.02,
+    "updatedAt": "2026-04-13T13:00:00+08:00"
+  }
+]

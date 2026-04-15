@@ -1,0 +1,317 @@
+[
+  {
+    "id": "PM-10001",
+    "seq": 1,
+    "category": "tweet",
+    "sort": 100,
+    "virtualIncome": 0,
+    "frontTitle": "番茄小说推文",
+    "backTitle": "番茄小说-后台",
+    "boomSort": "10",
+    "projectTags": "小说,CPA",
+    "tagTitle": "",
+    "booklistLink": "https://example.com/list/tomato",
+    "orderRemark": "测试备注",
+    "projectIcon": "https://picsum.photos/seed/pmicon1/96/96",
+    "stampUrl": "https://picsum.photos/seed/pmstamp1/64/64",
+    "transferGift": "off",
+    "projectStatus": "show",
+    "hotProject": "yes",
+    "isNewProduct": "no",
+    "onlineState": "online",
+    "wechatPush": "no",
+    "forbidPromptWords": "no",
+    "boomListVisible": "show",
+    "searchVolumeVisible": "show",
+    "expireDays": 360,
+    "limitPromptWords": 3,
+    "isBackfill": "yes",
+    "homeDisplay": "yes",
+    "memberType": "普通会员",
+    "memberVisible": "no",
+    "memberCanDo": "yes",
+    "adminHidden": "no",
+    "isToutiao": "yes",
+    "projectEn": "tomato-novel",
+    "shortDramaTweet": "yes",
+    "officialPrompts": "yes",
+    "isBook": "yes",
+    "isBatch": "yes",
+    "isWhitelist": "yes",
+    "assignMentor": "no",
+    "isCommercial": "yes",
+    "isOverseas": "yes",
+    "copyrightNative": "yes",
+    "detail": {
+      "introduction": {
+        "projectDescription": {
+          "title": "项目概览",
+          "description": "面向新手的项目说明与收益结构摘要。",
+          "contentType": "article",
+          "content": "<p><strong>番茄小说推文</strong> 适合有短视频账号的创作者，按 CPA 结算。</p><ul><li>准备账号与素材</li><li>按书单选书</li><li>发布挂载链接</li></ul>",
+          "visible": "yes"
+        },
+        "keywordRequirements": {
+          "title": "关键词与话题",
+          "description": "搜索与话题标签相关约束。",
+          "contentType": "article",
+          "content": "<p>需包含指定关键词；避免违规词与竞品品牌词。</p>",
+          "visible": "yes"
+        },
+        "backfill": {
+          "title": "回填说明",
+          "description": "订单与转化回填规则。",
+          "contentType": "article",
+          "content": "<p>请在 T+1 内完成回填，超时将影响结算。</p>",
+          "visible": "no"
+        },
+        "order": {
+          "title": "下单流程",
+          "description": "从选书到出单的步骤。",
+          "contentType": "article",
+          "content": "<p>选书 → 生成推广链接 → 发布 → 回传订单号。</p>",
+          "visible": "yes"
+        },
+        "settlement": {
+          "title": "结算周期",
+          "description": "打款与对账说明。",
+          "contentType": "video",
+          "content": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+          "visible": "yes"
+        }
+      },
+      "process": {
+        "title": "操作演示",
+        "description": "全流程录屏，建议全屏观看。",
+        "contentType": "video",
+        "content": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+        "visible": "yes"
+      },
+      "notice": {
+        "title": "合规提醒",
+        "description": "发布前必读。",
+        "contentType": "article",
+        "content": "<p>请勿使用虚假宣传；遵守平台与版权方规则。</p>",
+        "visible": "yes"
+      },
+      "teaching": {
+        "title": "剪辑要点",
+        "description": "图文教程。",
+        "contentType": "article",
+        "content": "<p>封面清晰、前 3 秒抛出钩子、结尾引导转化。</p>",
+        "visible": "yes"
+      }
+    },
+    "updateTime": "2024-03-21 10:20:00"
+  },
+  {
+    "id": "PM-10002",
+    "seq": 2,
+    "category": "drama",
+    "sort": 88,
+    "virtualIncome": 0,
+    "frontTitle": "短剧拉新 A",
+    "backTitle": "短剧拉新-A-后台",
+    "boomSort": "5",
+    "projectTags": "短剧,CPS",
+    "tagTitle": "爆单",
+    "booklistLink": "",
+    "orderRemark": "",
+    "projectIcon": "",
+    "stampUrl": "",
+    "transferGift": "off",
+    "projectStatus": "show",
+    "hotProject": "yes",
+    "isNewProduct": "yes",
+    "onlineState": "online",
+    "wechatPush": "no",
+    "forbidPromptWords": "no",
+    "boomListVisible": "hide",
+    "searchVolumeVisible": "show",
+    "expireDays": 180,
+    "limitPromptWords": 0,
+    "isBackfill": "no",
+    "homeDisplay": "yes",
+    "memberType": "高级会员",
+    "memberVisible": "yes",
+    "memberCanDo": "yes",
+    "adminHidden": "no",
+    "isToutiao": "no",
+    "projectEn": "drama-a",
+    "shortDramaTweet": "yes",
+    "officialPrompts": "yes",
+    "isBook": "no",
+    "isBatch": "yes",
+    "isWhitelist": "yes",
+    "assignMentor": "no",
+    "isCommercial": "yes",
+    "isOverseas": "no",
+    "copyrightNative": "yes",
+    "detail": {
+      "introduction": {
+        "projectDescription": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "keywordRequirements": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "backfill": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "order": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "settlement": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        }
+      },
+      "process": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      },
+      "notice": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      },
+      "teaching": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      }
+    },
+    "updateTime": "2024-03-21 11:05:00"
+  },
+  {
+    "id": "PM-10003",
+    "seq": 3,
+    "category": "resource",
+    "sort": 60,
+    "virtualIncome": 0,
+    "frontTitle": "网盘资源推广",
+    "backTitle": "网盘-资源位",
+    "boomSort": "",
+    "projectTags": "资源",
+    "tagTitle": "",
+    "booklistLink": "",
+    "orderRemark": "隐藏演示",
+    "projectIcon": "https://picsum.photos/seed/pmicon3/96/96",
+    "stampUrl": "",
+    "transferGift": "off",
+    "projectStatus": "hide",
+    "hotProject": "no",
+    "isNewProduct": "no",
+    "onlineState": "offline",
+    "wechatPush": "no",
+    "forbidPromptWords": "yes",
+    "boomListVisible": "show",
+    "searchVolumeVisible": "hide",
+    "expireDays": 90,
+    "limitPromptWords": 10,
+    "isBackfill": "yes",
+    "homeDisplay": "no",
+    "memberType": "普通会员",
+    "memberVisible": "no",
+    "memberCanDo": "no",
+    "adminHidden": "yes",
+    "isToutiao": "no",
+    "projectEn": "pan-res",
+    "shortDramaTweet": "no",
+    "officialPrompts": "no",
+    "isBook": "no",
+    "isBatch": "no",
+    "isWhitelist": "no",
+    "assignMentor": "no",
+    "isCommercial": "no",
+    "isOverseas": "no",
+    "copyrightNative": "no",
+    "detail": {
+      "introduction": {
+        "projectDescription": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "keywordRequirements": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "backfill": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "order": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        },
+        "settlement": {
+          "title": "",
+          "description": "",
+          "contentType": "article",
+          "content": "",
+          "visible": "yes"
+        }
+      },
+      "process": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      },
+      "notice": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      },
+      "teaching": {
+        "title": "",
+        "description": "",
+        "contentType": "article",
+        "content": "",
+        "visible": "yes"
+      }
+    },
+    "updateTime": "2024-03-20 16:40:00"
+  }
+]

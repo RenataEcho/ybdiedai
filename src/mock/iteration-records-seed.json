@@ -1,0 +1,410 @@
+[
+  {
+    "id": "ir-yb-1",
+    "scope": "youbao",
+    "parentRequirement": "右豹2026改版需求",
+    "priority": "SSS",
+    "version": "V8.0",
+    "subRequirements": [
+      {
+        "id": "isr-1776160704193-0-5b73",
+        "title": "新增榜单数据",
+        "priority": "SSS",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-7",
+          "ps-8",
+          "ps-12",
+          "ps-13",
+          "ps-5"
+        ],
+        "dateStart": "2026-04-15",
+        "dateEnd": "2026-04-16",
+        "status": "in_progress"
+      },
+      {
+        "id": "isr-1776160704193-1-76ac",
+        "title": "新增首页推荐",
+        "priority": "SS",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-7",
+          "ps-12",
+          "ps-13",
+          "ps-8"
+        ],
+        "dateStart": "2026-04-14",
+        "dateEnd": "2026-04-20",
+        "status": "in_progress"
+      },
+      {
+        "id": "isr-1776160704193-2-21c6",
+        "title": "学院管理优化",
+        "priority": "S",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-7",
+          "ps-8",
+          "ps-12",
+          "ps-13"
+        ],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776160704193-3-8b83",
+        "title": "项目管理详情优化",
+        "priority": "A",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-8",
+          "ps-12",
+          "ps-13"
+        ],
+        "dateStart": "2026-04-12",
+        "dateEnd": "2026-04-20",
+        "status": "in_progress"
+      },
+      {
+        "id": "isr-1776160704193-4-0960",
+        "title": "对接导师系统api",
+        "priority": "SSS",
+        "assigneeIds": [
+          "ps-1",
+          "ps-5",
+          "ps-8",
+          "ps-12",
+          "ps-13"
+        ],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-20",
+        "status": "in_progress"
+      },
+      {
+        "id": "isr-1776225873215-5-72f1",
+        "title": "小程序整体前端对齐APP样式和接口",
+        "priority": "SSS",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-8",
+          "ps-10",
+          "ps-11"
+        ],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-24",
+        "status": "in_progress"
+      }
+    ],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-3",
+      "ps-4"
+    ],
+    "parentDateStart": "2026-04-14",
+    "parentDateEnd": "2026-04-27",
+    "detailRulesHtml": "<p>1、榜单数据:个人top-10;团队TOP-10;社群top-10;</p><p>1.1、按用户收益纬度和项目收益纬度</p><p>1.2、社群榜单需要对接导师系统api,导师系统需求见导师迭代记录</p><p>2、首页推荐:项目、任务推荐feed流,基于基础算法推荐</p><p>3、学院管理:增加小金刚区;增加内容类型:图文、视频</p><p>4、项目管理优化详情配置;支持自定义标题、副标题、显示/隐藏</p><p>5、对接导师系统api:主要涉及品牌社群、加入社群时显示的二维码</p>",
+    "status": "in_progress",
+    "releaseTime": "",
+    "notesHtml": "<p>前端具体规则说明看飞书文档:https://mqv7erfldf.feishu.cn/wiki/Qki8wgLA3iHjt0kp1tccXciNnCd?from=from_copylink</p>",
+    "createdAt": "2026-03-28T08:00:00.000Z"
+  },
+  {
+    "id": "ir-yboom-1",
+    "scope": "youboom",
+    "parentRequirement": "新增奖励管理",
+    "priority": "A",
+    "version": "",
+    "subRequirements": [
+      {
+        "id": "isr-1776230785571-0-084e",
+        "title": "后台增加奖励管理",
+        "priority": "A",
+        "assigneeIds": [
+          "ps-8",
+          "ps-7"
+        ],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776230785571-1-3e8e",
+        "title": "前端增加奖励钱包",
+        "priority": "A",
+        "assigneeIds": [
+          "ps-8",
+          "ps-7"
+        ],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      }
+    ],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-7",
+      "ps-8"
+    ],
+    "parentDateStart": "",
+    "parentDateEnd": "",
+    "detailRulesHtml": "<p>后台上传奖励数据表,进行审核和打款<br>1、只有审核通过之后才会在前端显示<br>2、后台新增一级菜单:财务管理;财务管理下包含“品牌打款、奖励管理”</p><p>3、需要接入微信通知模板:支持发送微信通知给用户</p><p>4、打款成功需要前端在“消息通知-钱包通知”告知用户;模板如下:</p><p>标题:到账通知</p><p>内容:“奖励事由事由”,奖励金额“xxx.xx”已发送至您的平台活动钱包,请前往查看<br><br></p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-12T09:30:00.000Z"
+  },
+  {
+    "id": "ir-sys-1",
+    "scope": "system",
+    "parentRequirement": "规则说明搜索优化\n【涉及板块】规则说明\n【原记录开发人员】张三",
+    "priority": "B",
+    "version": "",
+    "subRequirements": [],
+    "parentAssigneeIds": [],
+    "parentDateStart": "",
+    "parentDateEnd": "",
+    "detailRulesHtml": "<p>菜单标题与路由键联合筛选，支持回车触发搜索。</p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-13T15:00:00.000Z"
+  },
+  {
+    "id": "ir-mentor-1",
+    "scope": "mentor",
+    "parentRequirement": "对接右豹所需要新增的模块",
+    "priority": "SS",
+    "version": "",
+    "subRequirements": [
+      {
+        "id": "isr-1776232264846-0-35a7",
+        "title": "新增门派管理:门派信息配置",
+        "priority": "SSS",
+        "assigneeIds": [
+          "ps-5"
+        ],
+        "dateStart": "2026-04-15",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776232264846-1-ba7f",
+        "title": "新增客服管理:客服配置",
+        "priority": "SS",
+        "assigneeIds": [
+          "ps-5"
+        ],
+        "dateStart": "2026-04-15",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776232264846-2-5c81",
+        "title": "新增信息录入审核",
+        "priority": "SS",
+        "assigneeIds": [
+          "ps-5"
+        ],
+        "dateStart": "2026-04-20",
+        "dateEnd": "2026-04-21",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776232264846-3-55eb",
+        "title": "导师管理增加字段“所属门派”、“导师二维码”",
+        "priority": "SS",
+        "assigneeIds": [
+          "ps-5"
+        ],
+        "dateStart": "2026-04-17",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776233490730-4-9e1b",
+        "title": "新增消息推送",
+        "priority": "B",
+        "assigneeIds": [
+          "ps-5"
+        ],
+        "dateStart": "2026-04-22",
+        "dateEnd": "2026-04-24",
+        "status": "pending"
+      }
+    ],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-3",
+      "ps-5"
+    ],
+    "parentDateStart": "2026-04-15",
+    "parentDateEnd": "2026-04-23",
+    "detailRulesHtml": "<p></p><ul><li>1、门派管理:右豹社群排行榜信息和详情数据的获取<br>2、客服管理:配置客服的基础信息和客服的企业微信二维码<br>2.1、每个客服会生成一个专属的二维码;用户扫描填写信息即绑定该客服;</li><li>3、录入审核:客服将自己的二维码发送给用户填写信息</li><li>4、导师管理数据表增加字段:所属门派、导师二维码</li><li>4.1、所属门派:数据从门派管理获取,每个导师只能有一个门派</li><li>4.2、导师二维码:为每个导师生成一个专属二维码,用于用户和导师的绑定<br>5、消息推送:针对录入审核被驳回的进行微信消息推送和站内信推送<br>5.1、推送标题:信息录入驳回<br>5.2、推送内容:显示客服驳回的原因即可</li><li>5.3、若没有原因则默认文案:您的信息录入审核被驳回</li></ul><p></p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p>待开发</p>",
+    "createdAt": "2026-04-14T09:00:00.000Z"
+  },
+  {
+    "id": "ir-1776160209279",
+    "scope": "mentor",
+    "parentRequirement": "导师系统全局测试",
+    "priority": "SS",
+    "version": "",
+    "subRequirements": [],
+    "parentAssigneeIds": [
+      "ps-2",
+      "ps-3"
+    ],
+    "parentDateStart": "2026-04-13",
+    "parentDateEnd": "2026-04-17",
+    "detailRulesHtml": "<p>现在已经完成的模块全局测试是否通过</p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-14T09:50:09.279Z"
+  },
+  {
+    "id": "ir-1776161825123",
+    "scope": "youbao",
+    "parentRequirement": "右豹对接新版分销体系",
+    "priority": "SS",
+    "version": "V8.0.1",
+    "subRequirements": [
+      {
+        "id": "isr-1776226008419-0-76ef",
+        "title": "对接新版分销体系;注意新老分销版本的数据切换",
+        "priority": "SSS",
+        "assigneeIds": [
+          "ps-1",
+          "ps-3",
+          "ps-7"
+        ],
+        "dateStart": "2026-04-20",
+        "dateEnd": "2026-04-24",
+        "status": "pending"
+      }
+    ],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-3",
+      "ps-7",
+      "ps-1776226050047"
+    ],
+    "parentDateStart": "2026-04-20",
+    "parentDateEnd": "2026-04-24",
+    "detailRulesHtml": "<p>对接新版分销体系;注意新老分销版本的数据切换</p><p>1、切换时间戳对应的数据</p><p>2、对标线上数据看看新老版本的数据波动</p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-14T10:17:05.123Z"
+  },
+  {
+    "id": "ir-1776233735007",
+    "scope": "youbao",
+    "parentRequirement": "右豹实名优化(穿插需求太多,已delay)",
+    "priority": "A",
+    "version": "",
+    "subRequirements": [],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-3",
+      "ps-7",
+      "ps-8",
+      "ps-12",
+      "ps-13",
+      "ps-1776226050047"
+    ],
+    "parentDateStart": "2026-05-11",
+    "parentDateEnd": "2026-05-14",
+    "detailRulesHtml": "<p><span data-lark-record-data=\"{&quot;isCut&quot;:false,&quot;rootId&quot;:&quot;XyiVdTQp6o2ATexzh8UcTaEenKg&quot;,&quot;parentId&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;blockIds&quot;:[281,282,283,284,285,287],&quot;recordIds&quot;:[&quot;WgG1dzvqFoLTbVxWEDFck16SnQb&quot;,&quot;EDw2dyeKgoiUSyxtxB0cVWGPnah&quot;,&quot;DOLQd9PPgoy1kaxXZXycNUtjnhc&quot;,&quot;Lu9Mdi4DAoolwbxXpmCczdLfnXd&quot;,&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;,&quot;Rri0d0qFvoIuS9xcH56cr4EJn2d&quot;],&quot;recordMap&quot;:{&quot;WgG1dzvqFoLTbVxWEDFck16SnQb&quot;:{&quot;id&quot;:&quot;WgG1dzvqFoLTbVxWEDFck16SnQb&quot;,&quot;snapshot&quot;:{&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;实名支持个人、企业共同存在&quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+d&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]},&quot;nextNum&quot;:1}},&quot;seq&quot;:&quot;1&quot;,&quot;type&quot;:&quot;ordered&quot;,&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;children&quot;:[],&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;comments&quot;:[],&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false}},&quot;EDw2dyeKgoiUSyxtxB0cVWGPnah&quot;:{&quot;id&quot;:&quot;EDw2dyeKgoiUSyxtxB0cVWGPnah&quot;,&quot;snapshot&quot;:{&quot;seq&quot;:&quot;auto&quot;,&quot;revisions&quot;:[],&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;hidden&quot;:false,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+f&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;实名支持选择非大陆居民身份信息&quot;}}},&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;comments&quot;:[],&quot;locked&quot;:false}},&quot;DOLQd9PPgoy1kaxXZXycNUtjnhc&quot;:{&quot;id&quot;:&quot;DOLQd9PPgoy1kaxXZXycNUtjnhc&quot;,&quot;snapshot&quot;:{&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;,&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;comments&quot;:[],&quot;hidden&quot;:false,&quot;align&quot;:&quot;&quot;,&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+i&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;提现支持用户选择个人帐户or企业帐户&quot;}}}}},&quot;Lu9Mdi4DAoolwbxXpmCczdLfnXd&quot;:{&quot;id&quot;:&quot;Lu9Mdi4DAoolwbxXpmCczdLfnXd&quot;,&quot;snapshot&quot;:{&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+r&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;支持用户主动删除实名信息:需要二次确认并且需要手机验证&quot;}}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;revisions&quot;:[],&quot;hidden&quot;:false,&quot;seq&quot;:&quot;auto&quot;,&quot;comments&quot;:[],&quot;locked&quot;:false,&quot;children&quot;:[]}},&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;:{&quot;id&quot;:&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;comments&quot;:[],&quot;children&quot;:[&quot;MCJcdExWYoPxVUxnAqAccJgsnXz&quot;],&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;,&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+f&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;对公H5认证取消唯一性机制机制&quot;}}}}},&quot;MCJcdExWYoPxVUxnAqAccJgsnXz&quot;:{&quot;id&quot;:&quot;MCJcdExWYoPxVUxnAqAccJgsnXz&quot;,&quot;snapshot&quot;:{&quot;locked&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;align&quot;:&quot;&quot;,&quot;seq&quot;:&quot;1&quot;,&quot;revisions&quot;:[],&quot;parent_id&quot;:&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;,&quot;comments&quot;:[],&quot;hidden&quot;:false,&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+10&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;核心:同一个对公帐户只能由一个右豹ID绑定;一个用户可以实名多个对公帐户&quot;}}},&quot;folded&quot;:false,&quot;type&quot;:&quot;ordered&quot;}},&quot;Rri0d0qFvoIuS9xcH56cr4EJn2d&quot;:{&quot;id&quot;:&quot;Rri0d0qFvoIuS9xcH56cr4EJn2d&quot;,&quot;snapshot&quot;:{&quot;hidden&quot;:false,&quot;children&quot;:[],&quot;folded&quot;:false,&quot;locked&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;详见实名文档V7.0部分 &quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+c*0*1*2+1&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;],&quot;1&quot;:[&quot;inline-component&quot;,&quot;{\\&quot;id\\&quot;:\\&quot;cf84118a-7b80-4fca-9c07-61168c76e01d\\&quot;,\\&quot;type\\&quot;:\\&quot;mention_doc\\&quot;,\\&quot;data\\&quot;:{\\&quot;file_type\\&quot;:16,\\&quot;icon_type\\&quot;:22,\\&quot;token\\&quot;:\\&quot;StXNwHWAjizrvAkruTjcebxAn3c\\&quot;,\\&quot;tenant_id\\&quot;:\\&quot;7002873924401086492\\&quot;,\\&quot;raw_url\\&quot;:\\&quot;https://mqv7erfldf.feishu.cn/wiki/StXNwHWAjizrvAkruTjcebxAn3c?from=from_copylink\\&quot;,\\&quot;title\\&quot;:\\&quot;右豹认证&amp;对公相关需求\\&quot;}}&quot;],&quot;2&quot;:[&quot;link-id&quot;,&quot;6206f547-8e60-4258-9da3-7bd0de8d3003&quot;]},&quot;nextNum&quot;:3}},&quot;align&quot;:&quot;&quot;,&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;seq&quot;:&quot;auto&quot;}},&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;:{&quot;id&quot;:&quot;JHMpdl5Q9oRb02xCSnLcOtKdnkL&quot;,&quot;snapshot&quot;:{&quot;parent_id&quot;:&quot;XyiVdTQp6o2ATexzh8UcTaEenKg&quot;,&quot;text_color&quot;:&quot;&quot;,&quot;revisions&quot;:[],&quot;hidden&quot;:false,&quot;children&quot;:[&quot;WgG1dzvqFoLTbVxWEDFck16SnQb&quot;,&quot;EDw2dyeKgoiUSyxtxB0cVWGPnah&quot;,&quot;DOLQd9PPgoy1kaxXZXycNUtjnhc&quot;,&quot;Lu9Mdi4DAoolwbxXpmCczdLfnXd&quot;,&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;,&quot;Rri0d0qFvoIuS9xcH56cr4EJn2d&quot;],&quot;background_color&quot;:&quot;rgb(255,245,235)&quot;,&quot;border_color&quot;:&quot;rgb(254,212,164)&quot;,&quot;align&quot;:&quot;left&quot;,&quot;emoji_value&quot;:&quot;1f389&quot;,&quot;type&quot;:&quot;callout&quot;,&quot;comments&quot;:[],&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;emoji_id&quot;:&quot;pushpin&quot;,&quot;locked&quot;:false}}},&quot;payloadMap&quot;:{},&quot;extra&quot;:{&quot;channel&quot;:&quot;saas&quot;,&quot;pasteRandomId&quot;:&quot;b1ae71ed-c959-421e-a928-1f94a5525678&quot;,&quot;mention_page_title&quot;:{},&quot;external_mention_url&quot;:{},&quot;isEqualBlockSelection&quot;:true},&quot;isKeepQuoteContainer&quot;:false,&quot;selection&quot;:[{&quot;id&quot;:281,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:13},&quot;recordId&quot;:&quot;WgG1dzvqFoLTbVxWEDFck16SnQb&quot;},{&quot;id&quot;:282,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:15},&quot;recordId&quot;:&quot;EDw2dyeKgoiUSyxtxB0cVWGPnah&quot;},{&quot;id&quot;:283,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:18},&quot;recordId&quot;:&quot;DOLQd9PPgoy1kaxXZXycNUtjnhc&quot;},{&quot;id&quot;:284,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:27},&quot;recordId&quot;:&quot;Lu9Mdi4DAoolwbxXpmCczdLfnXd&quot;},{&quot;id&quot;:285,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:15},&quot;recordId&quot;:&quot;Qw2adSIvuoqvvkxlvk4cD7qlnoe&quot;},{&quot;id&quot;:286,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:36},&quot;recordId&quot;:&quot;MCJcdExWYoPxVUxnAqAccJgsnXz&quot;},{&quot;id&quot;:287,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:13},&quot;recordId&quot;:&quot;Rri0d0qFvoIuS9xcH56cr4EJn2d&quot;}],&quot;pasteFlag&quot;:&quot;1fc6d9bb-d45b-40c2-93fc-625e0a9cc540&quot;}\" data-lark-record-format=\"docx/record\" class=\"lark-record-clipboard\"></span></p><div data-page-id=\"XyiVdTQp6o2ATexzh8UcTaEenKg\" data-lark-html-role=\"root\" data-docx-has-block-data=\"false\"><ol start=\"1\" class=\"list-number1\"><li class=\"ace-line ace-line old-record-id-WgG1dzvqFoLTbVxWEDFck16SnQb\" data-list=\"number\"><div>1、实名支持个人、企业共同存在</div></li><li class=\"ace-line ace-line old-record-id-EDw2dyeKgoiUSyxtxB0cVWGPnah\" data-list=\"number\"><div>2、实名支持选择非大陆居民身份信息</div></li><li class=\"ace-line ace-line old-record-id-DOLQd9PPgoy1kaxXZXycNUtjnhc\" data-list=\"number\"><div>3、提现支持用户选择个人帐户or企业帐户</div></li><li class=\"ace-line ace-line old-record-id-Lu9Mdi4DAoolwbxXpmCczdLfnXd\" data-list=\"number\"><div>4、支持用户主动删除实名信息:需要二次确认并且需要手机验证</div></li><li class=\"ace-line ace-line old-record-id-Qw2adSIvuoqvvkxlvk4cD7qlnoe\" data-list=\"number\"><div>5、对公H5认证取消唯一性机制机制</div><ol class=\"list-number2\"><li class=\"ace-line ace-line old-record-id-MCJcdExWYoPxVUxnAqAccJgsnXz\" data-list=\"number\"><div>6、核心:同一个对公帐户只能由一个右豹ID绑定;一个用户可以实名多个对公帐户</div></li></ol></li><li class=\"ace-line ace-line old-record-id-Rri0d0qFvoIuS9xcH56cr4EJn2d\" data-list=\"number\"><div>详见实名文档https://mqv7erfldf.feishu.cn/wiki/StXNwHWAjizrvAkruTjcebxAn3c?from=from_copylink</div></li></ol></div>",
+    "status": "in_progress",
+    "releaseTime": "",
+    "notesHtml": "<p>穿插需求太多,已delay</p>",
+    "createdAt": "2026-04-15T06:15:35.007Z"
+  },
+  {
+    "id": "ir-1776238217657",
+    "scope": "youbao",
+    "parentRequirement": "中台新增数据看板(dashbord)",
+    "priority": "A",
+    "version": "",
+    "subRequirements": [],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-3",
+      "ps-7",
+      "ps-9",
+      "ps-10"
+    ],
+    "parentDateStart": "2026-04-27",
+    "parentDateEnd": "2026-04-30",
+    "detailRulesHtml": "<p>右豹中台增加基Dashboard,方便运营监测数据</p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p>右豹中台增加基Dashboard,方便运营监测数据</p>",
+    "createdAt": "2026-04-15T07:30:17.658Z"
+  },
+  {
+    "id": "ir-1776241008136",
+    "scope": "youbao",
+    "parentRequirement": "后台需求\n1、多项目订单合并和提现记录优化",
+    "priority": "S",
+    "version": "",
+    "subRequirements": [
+      {
+        "id": "isr-1776241008136-0-6c77",
+        "title": "多项目订单合并",
+        "priority": "S",
+        "assigneeIds": [],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      },
+      {
+        "id": "isr-1776241008136-1-3800",
+        "title": "提现记录增加字段",
+        "priority": "A",
+        "assigneeIds": [],
+        "dateStart": "2026-04-13",
+        "dateEnd": "2026-04-17",
+        "status": "pending"
+      }
+    ],
+    "parentAssigneeIds": [],
+    "parentDateStart": "",
+    "parentDateEnd": "",
+    "detailRulesHtml": "<p><span data-lark-record-data=\"{&quot;isCut&quot;:false,&quot;rootId&quot;:&quot;XyiVdTQp6o2ATexzh8UcTaEenKg&quot;,&quot;parentId&quot;:&quot;Bq7IdiuTzowCP2xgvUUcB6Gpnog&quot;,&quot;blockIds&quot;:[36,39],&quot;recordIds&quot;:[&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;,&quot;EOlmd7RCLoh26jxPwltcSiLHnkd&quot;],&quot;recordMap&quot;:{&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;:{&quot;id&quot;:&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;Bq7IdiuTzowCP2xgvUUcB6Gpnog&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[&quot;TyfPdnAq7o2IhCx7vBocjdujni1&quot;,&quot;MOeHdcomEoHBXxx9FczckaeGnnh&quot;],&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;多项目订单合并上传:仅品牌的项目&quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+g&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]},&quot;nextNum&quot;:1}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;1&quot;}},&quot;TyfPdnAq7o2IhCx7vBocjdujni1&quot;:{&quot;id&quot;:&quot;TyfPdnAq7o2IhCx7vBocjdujni1&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+2u&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;目前部分项目在右豹侧做了体裁区分,但官方未区分,故在官方关键词库是共享,但是订单在右豹侧需要区分给到用户;运营手动筛选关键词所属项目订单流程太消耗人效;故需要对部分项目做订单合并上传并自动分发到右豹侧项目&quot;}}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;1&quot;}},&quot;MOeHdcomEoHBXxx9FczckaeGnnh&quot;:{&quot;id&quot;:&quot;MOeHdcomEoHBXxx9FczckaeGnnh&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+17&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;订单分发主要逻辑:根据订单表的关键词查询在右豹的所属项目,再进行分发到对应的项目订单里&quot;}}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;}},&quot;EOlmd7RCLoh26jxPwltcSiLHnkd&quot;:{&quot;id&quot;:&quot;EOlmd7RCLoh26jxPwltcSiLHnkd&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;Bq7IdiuTzowCP2xgvUUcB6Gpnog&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;其他优化:提现记录增加提现钱包和提前后余额字段&quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+n&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]},&quot;nextNum&quot;:1}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;}},&quot;Bq7IdiuTzowCP2xgvUUcB6Gpnog&quot;:{&quot;id&quot;:&quot;Bq7IdiuTzowCP2xgvUUcB6Gpnog&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;callout&quot;,&quot;parent_id&quot;:&quot;XyiVdTQp6o2ATexzh8UcTaEenKg&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;,&quot;EOlmd7RCLoh26jxPwltcSiLHnkd&quot;,&quot;P6vfdTOrQopp46xLw1dcTUBenJo&quot;],&quot;background_color&quot;:&quot;rgb(255,245,235)&quot;,&quot;border_color&quot;:&quot;rgb(254,212,164)&quot;,&quot;text_color&quot;:&quot;&quot;,&quot;align&quot;:&quot;left&quot;,&quot;emoji_id&quot;:&quot;pushpin&quot;,&quot;emoji_value&quot;:&quot;1f956&quot;}}},&quot;payloadMap&quot;:{},&quot;extra&quot;:{&quot;channel&quot;:&quot;saas&quot;,&quot;pasteRandomId&quot;:&quot;44b220f1-027e-4ae9-91d3-4b0ab29e4498&quot;,&quot;mention_page_title&quot;:{},&quot;external_mention_url&quot;:{},&quot;isEqualBlockSelection&quot;:true},&quot;isKeepQuoteContainer&quot;:false,&quot;selection&quot;:[{&quot;id&quot;:36,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:16},&quot;recordId&quot;:&quot;DnzQdlgj0ocI3Bxq7TCccYyKndg&quot;},{&quot;id&quot;:37,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:102},&quot;recordId&quot;:&quot;TyfPdnAq7o2IhCx7vBocjdujni1&quot;},{&quot;id&quot;:38,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:43},&quot;recordId&quot;:&quot;MOeHdcomEoHBXxx9FczckaeGnnh&quot;},{&quot;id&quot;:39,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:23},&quot;recordId&quot;:&quot;EOlmd7RCLoh26jxPwltcSiLHnkd&quot;}],&quot;pasteFlag&quot;:&quot;1fc6d9bb-d45b-40c2-93fc-625e0a9cc540&quot;}\" data-lark-record-format=\"docx/record\" class=\"lark-record-clipboard\"></span></p><div data-page-id=\"XyiVdTQp6o2ATexzh8UcTaEenKg\" data-lark-html-role=\"root\" data-docx-has-block-data=\"false\"><ol start=\"1\" class=\"list-number1\"><li class=\"ace-line ace-line old-record-id-DnzQdlgj0ocI3Bxq7TCccYyKndg\" data-list=\"number\"><div>背景:目前部分项目在右豹侧做了体裁区分,但官方未区分,故在官方关键词库是共享,但是订单在右豹侧需要区分给到用户;运营手动筛选关键词所属项目订单流程太消耗人效;故需要对部分项目做订单合并上传并自动分发到右豹侧项目</div><ol class=\"list-number2\"><li class=\"ace-line ace-line old-record-id-TyfPdnAq7o2IhCx7vBocjdujni1\" data-list=\"number\"><div>1、多项目订单合并上传:仅品牌的项目</div></li><li class=\"ace-line ace-line old-record-id-MOeHdcomEoHBXxx9FczckaeGnnh\" data-list=\"number\"><div>2.1、订单分发主要逻辑:根据订单表的关键词查询在右豹的所属项目,再进行分发到对应的项目订单里</div></li></ol></li></ol><ul><li>3、其他优化:提现记录增加提现钱包和提前后余额字段</li></ul></div>",
+    "status": "in_progress",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-15T08:16:48.136Z"
+  },
+  {
+    "id": "ir-1776242409295",
+    "scope": "youboom",
+    "parentRequirement": "新增团队数据表\n对标前端的团队管理,后台仅统计V3",
+    "priority": "B",
+    "version": "",
+    "subRequirements": [],
+    "parentAssigneeIds": [
+      "ps-1",
+      "ps-7",
+      "ps-3",
+      "ps-8"
+    ],
+    "parentDateStart": "2026-04-20",
+    "parentDateEnd": "2026-04-24",
+    "detailRulesHtml": "<p><span data-lark-record-data=\"{&quot;isCut&quot;:false,&quot;rootId&quot;:&quot;AZBOdVNRdo9MFvxogHUcJEAJn1c&quot;,&quot;parentId&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;blockIds&quot;:[255,256,257,258],&quot;recordIds&quot;:[&quot;Jo2BdlkjboLElaxIs8QcnB8LnRd&quot;,&quot;IwOHdhDF3o4b2Fx9CzPc06OknBg&quot;,&quot;T0BHdC3F3o1m5DxJvPzcxpSanXc&quot;,&quot;QbJmdQZotoWIQsxhX18chGrjnng&quot;],&quot;recordMap&quot;:{&quot;Jo2BdlkjboLElaxIs8QcnB8LnRd&quot;:{&quot;id&quot;:&quot;Jo2BdlkjboLElaxIs8QcnB8LnRd&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;在菜单:“团队体系-团队长管理”下增加子菜单:团长数据&quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+r&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]},&quot;nextNum&quot;:1}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;1&quot;}},&quot;IwOHdhDF3o4b2Fx9CzPc06OknBg&quot;:{&quot;id&quot;:&quot;IwOHdhDF3o4b2Fx9CzPc06OknBg&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+h&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;支持切换不同代理平台的团长数据查看&quot;}}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;}},&quot;T0BHdC3F3o1m5DxJvPzcxpSanXc&quot;:{&quot;id&quot;:&quot;T0BHdC3F3o1m5DxJvPzcxpSanXc&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;apool&quot;:{&quot;nextNum&quot;:1,&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]}},&quot;initialAttributedTexts&quot;:{&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+g&quot;},&quot;text&quot;:{&quot;0&quot;:&quot;查询条件:团长ID(即用户ID)&quot;}}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;}},&quot;QbJmdQZotoWIQsxhX18chGrjnng&quot;:{&quot;id&quot;:&quot;QbJmdQZotoWIQsxhX18chGrjnng&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;ordered&quot;,&quot;parent_id&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[],&quot;text&quot;:{&quot;initialAttributedTexts&quot;:{&quot;text&quot;:{&quot;0&quot;:&quot;数据表相关数值字段支持排序:成员数、团队收益、团队奖励&quot;},&quot;attribs&quot;:{&quot;0&quot;:&quot;*0+r&quot;}},&quot;apool&quot;:{&quot;numToAttrib&quot;:{&quot;0&quot;:[&quot;author&quot;,&quot;7293099238173507585&quot;]},&quot;nextNum&quot;:1}},&quot;align&quot;:&quot;&quot;,&quot;folded&quot;:false,&quot;seq&quot;:&quot;auto&quot;}},&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;:{&quot;id&quot;:&quot;KXRtdo4lco6hU5x3cI6c9K8ln9d&quot;,&quot;snapshot&quot;:{&quot;type&quot;:&quot;table_cell&quot;,&quot;parent_id&quot;:&quot;UIt3dVeqWooULdxnYGEcvXCknkg&quot;,&quot;comments&quot;:[],&quot;revisions&quot;:[],&quot;locked&quot;:false,&quot;hidden&quot;:false,&quot;author&quot;:&quot;7293099238173507585&quot;,&quot;children&quot;:[&quot;Jo2BdlkjboLElaxIs8QcnB8LnRd&quot;,&quot;IwOHdhDF3o4b2Fx9CzPc06OknBg&quot;,&quot;T0BHdC3F3o1m5DxJvPzcxpSanXc&quot;,&quot;QbJmdQZotoWIQsxhX18chGrjnng&quot;,&quot;BGY5dj5DMoVXp2x73kUcJEL0nyd&quot;]}}},&quot;payloadMap&quot;:{},&quot;extra&quot;:{&quot;channel&quot;:&quot;saas&quot;,&quot;pasteRandomId&quot;:&quot;4864120d-9bef-470b-bc69-ccbc22b976d3&quot;,&quot;mention_page_title&quot;:{},&quot;external_mention_url&quot;:{},&quot;isEqualBlockSelection&quot;:true},&quot;isKeepQuoteContainer&quot;:false,&quot;selection&quot;:[{&quot;id&quot;:255,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:27},&quot;recordId&quot;:&quot;Jo2BdlkjboLElaxIs8QcnB8LnRd&quot;},{&quot;id&quot;:256,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:17},&quot;recordId&quot;:&quot;IwOHdhDF3o4b2Fx9CzPc06OknBg&quot;},{&quot;id&quot;:257,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:16},&quot;recordId&quot;:&quot;T0BHdC3F3o1m5DxJvPzcxpSanXc&quot;},{&quot;id&quot;:258,&quot;type&quot;:&quot;text&quot;,&quot;selection&quot;:{&quot;start&quot;:0,&quot;end&quot;:27},&quot;recordId&quot;:&quot;QbJmdQZotoWIQsxhX18chGrjnng&quot;}],&quot;pasteFlag&quot;:&quot;179cc220-57d7-43b1-a1ea-4140f24f7739&quot;}\" data-lark-record-format=\"docx/record\" class=\"lark-record-clipboard\"></span></p><div data-page-id=\"AZBOdVNRdo9MFvxogHUcJEAJn1c\" data-lark-html-role=\"root\" data-docx-has-block-data=\"false\"><ol start=\"1\" class=\"list-number1\"><li class=\"ace-line ace-line old-record-id-Jo2BdlkjboLElaxIs8QcnB8LnRd\" data-list=\"number\"><div>1、在菜单:“运营配置”下增加子菜单:团长数据</div></li><li class=\"ace-line ace-line old-record-id-T0BHdC3F3o1m5DxJvPzcxpSanXc\" data-list=\"number\"><div>2、查询条件:团长ID(即用户ID)</div></li><li class=\"ace-line ace-line old-record-id-QbJmdQZotoWIQsxhX18chGrjnng\" data-list=\"number\"><div>3、数据表相关数值字段支持排序:成员数、团队收益、团队奖励</div></li><li class=\"ace-line ace-line old-record-id-QbJmdQZotoWIQsxhX18chGrjnng\" data-list=\"number\"><div>4、同道圈也需要增加</div></li></ol></div>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p><br></p>",
+    "createdAt": "2026-04-15T08:40:09.296Z"
+  }
+]

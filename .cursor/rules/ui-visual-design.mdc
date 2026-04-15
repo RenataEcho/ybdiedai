@@ -1,0 +1,76 @@
+---
+description: 视觉设计规范：玻璃拟态卡片、深色背景、状态徽标语义色
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# 视觉设计规范
+
+## 1. 玻璃拟态卡片（Dashboard 数据卡片）
+
+用于 Dashboard 统计卡片，半透明 + backdrop-blur + 微边框光泽。
+
+```tsx
+// ✅ GOOD — 玻璃拟态样式
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.06)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: 16,
+  boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+};
+
+// ❌ BAD — 纯白卡片
+<Card style={{ background: '#fff', borderRadius: 8 }}>
+```
+
+## 2. 背景色
+
+使用深色/中性底色，避免纯白管理后台的廉价感。
+
+```css
+/* ✅ GOOD — 页面背景 */
+background: #0f1117;           /* 深黑 */
+background: #141820;           /* 深蓝黑 */
+background: #1a1d27;           /* 中性深色 */
+
+/* 侧边栏 */
+background: rgba(20, 24, 32, 0.95);
+
+/* ❌ BAD */
+background: #ffffff;
+background: #f5f5f5;
+```
+
+## 3. 状态徽标（Badge）颜色语义化
+
+| 状态 | 颜色 | 含义 |
+|------|------|------|
+| `error` / `#ef4444` | 红 | 紧急、异常、高优先级 |
+| `warning` / `#f97316` | 橙 | 一般、待处理、中优先级 |
+| `success` / `#22c55e` | 绿 | 已完成、正常、通过 |
+| `default` / `#6b7280` | 灰 | 归档、已关闭、无效 |
+
+```tsx
+// ✅ GOOD
+const statusConfig = {
+  urgent:    { color: '#ef4444', label: '紧急' },
+  normal:    { color: '#f97316', label: '一般' },
+  completed: { color: '#22c55e', label: '已完成' },
+  archived:  { color: '#6b7280', label: '已归档' },
+} as const;
+
+<Badge color={statusConfig[record.status].color} text={statusConfig[record.status].label} />
+
+// ❌ BAD — 随意使用颜色，无语义
+<Tag color="blue">待处理</Tag>
+<Tag color="purple">已完成</Tag>
+```
+
+## 4. 整体配色原则
+
+- 主色调：蓝紫渐变（`#6366f1` → `#8b5cf6`）用于主要操作按钮和高亮
+- 文字：`rgba(255,255,255,0.85)` 主文字，`rgba(255,255,255,0.45)` 次要文字
+- 分割线：`rgba(255,255,255,0.08)`
+- 禁止在深色背景上使用 Ant Design 默认浅色主题组件，需覆盖 token
