@@ -139,10 +139,11 @@ export function IterationRecordTable({
   onDelete: (row: IterationRecordRow) => void;
 }) {
   const rtc = useResizableTableColumns('iteration-record', ITERATION_RECORD_COL_DEFAULTS);
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  // 已展开的行 ID 集合；默认为空（即所有父需求默认折叠）
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
   const toggleRowCollapsed = useCallback((id: string) => {
-    setCollapsedIds((prev) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -211,7 +212,7 @@ export function IterationRecordTable({
         {paginated.map((row) => {
           const hasSubs = row.subRequirements.length > 0;
           const n = hasSubs ? row.subRequirements.length : 1;
-          const isCollapsed = collapsedIds.has(row.id);
+          const isCollapsed = !expandedIds.has(row.id);
           const parentBlock =
             row.parentRequirement ? (
               <div className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">

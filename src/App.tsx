@@ -61,6 +61,9 @@ import {
   UserCog,
   Moon,
   Sun,
+  Wand2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { 
   individualData, 
@@ -101,6 +104,7 @@ import {
   createIterationRowFromForm,
   iterationContentPlainText,
   ITERATION_SCOPE_LABEL,
+  ITERATION_STATUS_LABEL,
   parseIterationPriority,
   type IterationNavScope,
   type IterationRecordRow,
@@ -146,6 +150,7 @@ import {
 } from './sectGuildModel';
 import { SectGuildDrawerFields, SectGuildTable } from './SectGuildViews';
 import {
+  RewardApproveConfirmModal,
   RewardBatchImportDrawer,
   RewardManagementTable,
   RewardPaymentQueueDrawer,
@@ -184,6 +189,15 @@ import { EntryAuditWorkbenchPage } from './EntryAuditWorkbenchPage';
 import { MessageNotificationRecordsPage } from './MessageNotificationRecordsPage';
 import { GanttMapPage, type GanttBarRef } from './GanttMapPage';
 import { DashboardPage } from './DashboardPage';
+import RequirementPrototypePage from './RequirementPrototypePage';
+import PrototypeViewerPage from './PrototypeViewerPage';
+import {
+  loadPrototypes,
+  savePrototypes,
+  type SavedPrototype,
+  type PrototypeProductLine,
+  PRODUCT_LINE_LABEL as PROTO_PRODUCT_LINE_LABEL,
+} from './savedPrototypesModel';
 import { DevSaveToRepo } from './DevSaveToRepo';
 
 const PM_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-pm-drawer-width';
@@ -315,7 +329,8 @@ type ModuleType =
   | 'youboomTeam'
   | 'productStaff'
   | 'ganttMap'
-  | 'dashboard';
+  | 'dashboard'
+  | 'requirementPrototype';
 
 const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
   leaderboard: '榜单数据',
@@ -336,6 +351,7 @@ const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
   productStaff: '产研人员管理',
   ganttMap: '甘特地图',
   dashboard: 'Dashboard',
+  requirementPrototype: '需求原型设计',
 };
 
 type LeaderboardTab = 'individual' | 'team' | 'community';
@@ -475,6 +491,11 @@ export default function App() {
     'all' | 'tweet' | 'drama' | 'resource' | 'app'
   >('all');
   const [projectMgmtStatusFilter, setProjectMgmtStatusFilter] = useState<'all' | 'show' | 'hide'>('all');
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarPrevWidth, setSidebarPrevWidth] = useState(256);
+  const [sidebarIsResizing, setSidebarIsResizing] = useState(false);
+  const isIconOnly = sidebarWidth <= 56;
+  const [iterationRecordStatusFilter, setIterationRecordStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'testing' | 'released'>('all');
   const [ganttProductLine, setGanttProductLine] = useState<ProductLine>('youbao');
   const [iterationRecordScope, setIterationRecordScope] = useState<IterationNavScope>('youbao');
   const [iterationRecordRows, setIterationRecordRows] = useState<IterationRecordRow[]>(() =>
@@ -507,6 +528,8 @@ export default function App() {
   const [rewardImportDrawerOpen, setRewardImportDrawerOpen] = useState(false);
   const [rewardPaymentQueueOpen, setRewardPaymentQueueOpen] = useState(false);
   const [rewardRejectModalOpen, setRewardRejectModalOpen] = useState(false);
+  const [rewardApproveModalOpen, setRewardApproveModalOpen] = useState(false);
+  const [rewardBatchPayConfirm, setRewardBatchPayConfirm] = useState<{ count: number; total: number } | null>(null);
   const [projectMgmtDrawerWidth, setProjectMgmtDrawerWidth] = useState(readInitialPmDrawerWidth);
   const [iterationRecordDrawerWidth, setIterationRecordDrawerWidth] = useState(
     readInitialIterationRecordDrawerWidth
@@ -846,7 +869,8 @@ export default function App() {
   const hideMainPageHeader =
     activeModule === 'customerServiceManagement' ||
     activeModule === 'auditEntryWorkbench' ||
-    activeModule === 'auditMessageNotification';
+    activeModule === 'auditMessageNotification' ||
+    activeModule === 'requirementPrototype';
 
   const pageRuleHeaderAction = useMemo(() => {
     if (activeModule === 'ganttMap' || activeModule === 'dashboard') {
@@ -1104,12 +1128,41 @@ export default function App() {
     );
   }, []);
 
+  const handleSidebarResizeStart = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setSidebarIsResizing(true);
+    const startX = e.clientX;
+    const startW = sidebarWidth;
+    const onMove = (ev: PointerEvent) => {
+      const newW = Math.max(56, Math.min(480, startW + (ev.clientX - startX)));
+      setSidebarWidth(newW);
+      if (newW > 56) setSidebarPrevWidth(newW);
+    };
+    const onUp = () => {
+      setSidebarIsResizing(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [sidebarWidth]);
+
+  const toggleSidebarCollapse = useCallback(() => {
+    if (isIconOnly) {
+      setSidebarWidth(sidebarPrevWidth > 56 ? sidebarPrevWidth : 256);
+    } else {
+      setSidebarPrevWidth(sidebarWidth);
+      setSidebarWidth(56);
+    }
+  }, [isIconOnly, sidebarWidth, sidebarPrevWidth]);
+
   const filteredIterationRecordRows = useMemo(() => {
     const { title, content } = textSearchApplied.iterationRecord;
     const qt = title.trim().toLowerCase();
     const qc = content.trim().toLowerCase();
     return iterationRecordRows.filter((row) => {
       if (row.scope !== iterationRecordScope) return false;
+      if (iterationRecordStatusFilter !== 'all' && row.status !== iterationRecordStatusFilter) return false;
       const matchesTitle =
         !qt ||
         row.parentRequirement.toLowerCase().includes(qt) ||
@@ -1120,7 +1173,7 @@ export default function App() {
         iterationContentPlainText(row.notesHtml).includes(qc);
       return matchesTitle && matchesContent;
     });
-  }, [iterationRecordRows, iterationRecordScope, textSearchApplied.iterationRecord]);
+  }, [iterationRecordRows, iterationRecordScope, iterationRecordStatusFilter, textSearchApplied.iterationRecord]);
 
   const filteredProductStaffRows = useMemo(() => {
     const q = textSearchApplied.productStaff.name.trim().toLowerCase();
@@ -1320,17 +1373,48 @@ export default function App() {
         }}
       />
       {/* Sidebar */}
-      <aside className="w-64 border-r border-line flex flex-col sticky top-0 h-screen z-30" style={{ background: 'var(--color-sidebar)' }}>
-        <div className="p-6 border-b border-line">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white/90">不鸣文化后台迭代</span>
-          </div>
+      <aside
+        className="border-r border-line flex flex-col sticky top-0 h-screen z-30 shrink-0 relative overflow-x-hidden"
+        style={{
+          width: sidebarWidth,
+          transition: sidebarIsResizing ? 'none' : 'width 0.2s cubic-bezier(0.4,0,0.2,1)',
+          background: 'var(--color-sidebar)',
+        }}
+      >
+        <div className={`border-b border-line flex items-center ${isIconOnly ? 'justify-center py-3 px-1 flex-col gap-2' : 'gap-1 px-2 py-3'}`}>
+          {isIconOnly ? (
+            <>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                <Layers className="w-5 h-5 text-white" />
+              </div>
+              <button
+                type="button"
+                onClick={toggleSidebarCollapse}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+                title="展开侧边栏"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                <Layers className="w-5 h-5 text-white" />
+              </div>
+              <span className="flex-1 min-w-0 font-bold text-base tracking-tight text-gray-900 dark:text-white/90 truncate overflow-hidden whitespace-nowrap pl-1">不鸣文化后台迭代</span>
+              <button
+                type="button"
+                onClick={toggleSidebarCollapse}
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+                title="收起侧边栏"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
         
-        <nav className="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
+        <nav className={`sidebar-nav${isIconOnly ? ' sidebar-nav--icon-only' : ''} flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-2 text-sm`}>
           <button
             type="button"
             onClick={() => selectModule('ganttMap')}
@@ -1343,9 +1427,9 @@ export default function App() {
               }
             `}
           >
-            <span className="flex items-center gap-2">
-              <Calendar className={`h-4 w-4 ${activeModule === 'ganttMap' ? 'text-white' : 'text-accent'}`} />
-              甘特地图
+            <span className="flex min-w-0 items-center gap-2">
+              <Calendar className={`shrink-0 h-4 w-4 ${activeModule === 'ganttMap' ? 'text-white' : 'text-accent'}`} />
+              <span className="nav-label truncate">甘特地图</span>
             </span>
             {activeModule === 'ganttMap' ? <ChevronRight className="h-4 w-4 text-white/90" /> : null}
           </button>
@@ -1356,16 +1440,16 @@ export default function App() {
               onClick={() => setNavSections((s) => ({ ...s, youbao: !s.youbao }))}
               className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
             >
-              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
-                <Layers className="h-4 w-4 text-accent" />
-                右豹迭代
+              <span className="flex min-w-0 items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Layers className="shrink-0 h-4 w-4 text-accent" />
+                <span className="nav-label truncate">右豹迭代</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youbao ? '' : '-rotate-90'}`}
+                className={`nav-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youbao ? '' : '-rotate-90'}`}
               />
             </button>
             {navSections.youbao && (
-              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+              <div className="nav-group-content mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
                 <button
                   type="button"
                   onClick={() => openIterationRecord('youbao')}
@@ -1378,15 +1462,15 @@ export default function App() {
                         }
                       `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <GitBranch
-                      className={`h-4 w-4 ${
+                      className={`shrink-0 h-4 w-4 ${
                         activeModule === 'iterationRecord' && iterationRecordScope === 'youbao'
                           ? 'text-accent'
                           : 'text-gray-400'
                       }`}
                     />
-                    迭代记录
+                    <span className="nav-label truncate">迭代记录</span>
                   </span>
                   {activeModule === 'iterationRecord' && iterationRecordScope === 'youbao' ? (
                     <ChevronRight className="h-4 w-4" />
@@ -1405,9 +1489,9 @@ export default function App() {
                         ${isActive ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
                       `}
                     >
-                      <span className="flex items-center gap-2">
-                        <Icon className={`h-4 w-4 ${isActive ? 'text-accent' : 'text-gray-400 dark:text-white/35'}`} />
-                        {mod.name}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Icon className={`shrink-0 h-4 w-4 ${isActive ? 'text-accent' : 'text-gray-400 dark:text-white/35'}`} />
+                        <span className="nav-label truncate">{mod.name}</span>
                       </span>
                       {isActive && <ChevronRight className="h-4 w-4" />}
                     </button>
@@ -1423,16 +1507,16 @@ export default function App() {
               onClick={() => setNavSections((s) => ({ ...s, youboom: !s.youboom }))}
               className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
             >
-              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
-                <Sparkles className="h-4 w-4 text-accent" />
-                youboom迭代
+              <span className="flex min-w-0 items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Sparkles className="shrink-0 h-4 w-4 text-accent" />
+                <span className="nav-label truncate">youboom迭代</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youboom ? '' : '-rotate-90'}`}
+                className={`nav-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.youboom ? '' : '-rotate-90'}`}
               />
             </button>
             {navSections.youboom && (
-              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+              <div className="nav-group-content mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
                 <button
                   type="button"
                   onClick={() => openIterationRecord('youboom')}
@@ -1445,15 +1529,15 @@ export default function App() {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <GitBranch
-                      className={`h-4 w-4 ${
+                      className={`shrink-0 h-4 w-4 ${
                         activeModule === 'iterationRecord' && iterationRecordScope === 'youboom'
                           ? 'text-accent'
                           : 'text-gray-400'
                       }`}
                     />
-                    迭代记录
+                    <span className="nav-label truncate">迭代记录</span>
                   </span>
                   {activeModule === 'iterationRecord' && iterationRecordScope === 'youboom' ? (
                     <ChevronRight className="h-4 w-4" />
@@ -1474,11 +1558,11 @@ export default function App() {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <Gift
-                      className={`h-4 w-4 ${activeModule === 'rewardManagement' ? 'text-accent' : 'text-gray-400'}`}
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'rewardManagement' ? 'text-accent' : 'text-gray-400'}`}
                     />
-                    奖励管理
+                    <span className="nav-label truncate">奖励管理</span>
                   </span>
                   {activeModule === 'rewardManagement' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
@@ -1497,11 +1581,11 @@ export default function App() {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <Users
-                      className={`h-4 w-4 ${activeModule === 'youboomTeam' ? 'text-accent' : 'text-gray-400'}`}
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'youboomTeam' ? 'text-accent' : 'text-gray-400'}`}
                     />
-                    团队数据
+                    <span className="nav-label truncate">团队数据</span>
                   </span>
                   {activeModule === 'youboomTeam' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
@@ -1515,16 +1599,16 @@ export default function App() {
               onClick={() => setNavSections((s) => ({ ...s, mentor: !s.mentor }))}
               className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
             >
-              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
-                <UsersRound className="h-4 w-4 text-accent" />
-                导师迭代
+              <span className="flex min-w-0 items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <UsersRound className="shrink-0 h-4 w-4 text-accent" />
+                <span className="nav-label truncate">导师迭代</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentor ? '' : '-rotate-90'}`}
+                className={`nav-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentor ? '' : '-rotate-90'}`}
               />
             </button>
             {navSections.mentor && (
-              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+              <div className="nav-group-content mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
                 <button
                   type="button"
                   onClick={() => openIterationRecord('mentor')}
@@ -1537,15 +1621,15 @@ export default function App() {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <GitBranch
-                      className={`h-4 w-4 ${
+                      className={`shrink-0 h-4 w-4 ${
                         activeModule === 'iterationRecord' && iterationRecordScope === 'mentor'
                           ? 'text-accent'
                           : 'text-gray-400'
                       }`}
                     />
-                    迭代记录
+                    <span className="nav-label truncate">迭代记录</span>
                   </span>
                   {activeModule === 'iterationRecord' && iterationRecordScope === 'mentor' ? (
                     <ChevronRight className="h-4 w-4" />
@@ -1556,16 +1640,16 @@ export default function App() {
                   onClick={() => setNavSections((s) => ({ ...s, mentorOrg: !s.mentorOrg }))}
                   className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
                 >
-                  <span className="flex items-center gap-2 normal-case text-gray-700">
-                    <Building2 className="h-3.5 w-3.5 text-accent" />
-                    组织管理
+                  <span className="flex min-w-0 items-center gap-2 normal-case text-gray-700">
+                    <Building2 className="shrink-0 h-3.5 w-3.5 text-accent" />
+                    <span className="nav-label truncate">组织管理</span>
                   </span>
                   <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorOrg ? '' : '-rotate-90'}`}
+                    className={`nav-chevron h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorOrg ? '' : '-rotate-90'}`}
                   />
                 </button>
                 {navSections.mentorOrg && (
-                  <div className="mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
+                  <div className="nav-group-content mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -1577,11 +1661,11 @@ export default function App() {
                     ${activeModule === 'sectManagement' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
                   `}
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Shield
-                          className={`h-4 w-4 ${activeModule === 'sectManagement' ? 'text-accent' : 'text-gray-400'}`}
+                          className={`shrink-0 h-4 w-4 ${activeModule === 'sectManagement' ? 'text-accent' : 'text-gray-400'}`}
                         />
-                        门派管理
+                        <span className="nav-label truncate">门派管理</span>
                       </span>
                       {activeModule === 'sectManagement' ? <ChevronRight className="h-4 w-4" /> : null}
                     </button>
@@ -1600,13 +1684,13 @@ export default function App() {
                     }
                   `}
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Headphones
-                          className={`h-4 w-4 ${
+                          className={`shrink-0 h-4 w-4 ${
                             activeModule === 'customerServiceManagement' ? 'text-accent' : 'text-gray-400'
                           }`}
                         />
-                        客服管理
+                        <span className="nav-label truncate">客服管理</span>
                       </span>
                       {activeModule === 'customerServiceManagement' ? <ChevronRight className="h-4 w-4" /> : null}
                     </button>
@@ -1617,16 +1701,16 @@ export default function App() {
                   onClick={() => setNavSections((s) => ({ ...s, mentorAudit: !s.mentorAudit }))}
                   className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
                 >
-                  <span className="flex items-center gap-2 normal-case text-gray-700">
-                    <ClipboardCheck className="h-3.5 w-3.5 text-accent" />
-                    客服审核中心
+                  <span className="flex min-w-0 items-center gap-2 normal-case text-gray-700">
+                    <ClipboardCheck className="shrink-0 h-3.5 w-3.5 text-accent" />
+                    <span className="nav-label truncate">客服审核中心</span>
                   </span>
                   <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorAudit ? '' : '-rotate-90'}`}
+                    className={`nav-chevron h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.mentorAudit ? '' : '-rotate-90'}`}
                   />
                 </button>
                 {navSections.mentorAudit && (
-                  <div className="mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
+                  <div className="nav-group-content mt-0.5 space-y-0.5 border-l border-line ml-2 pl-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -1642,13 +1726,13 @@ export default function App() {
                     }
                   `}
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <FileSearch
-                          className={`h-4 w-4 ${
+                          className={`shrink-0 h-4 w-4 ${
                             activeModule === 'auditEntryWorkbench' ? 'text-accent' : 'text-gray-400'
                           }`}
                         />
-                        录入审核
+                        <span className="nav-label truncate">录入审核</span>
                       </span>
                       {activeModule === 'auditEntryWorkbench' ? <ChevronRight className="h-4 w-4" /> : null}
                     </button>
@@ -1667,13 +1751,13 @@ export default function App() {
                     }
                   `}
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
                         <Bell
-                          className={`h-4 w-4 ${
+                          className={`shrink-0 h-4 w-4 ${
                             activeModule === 'auditMessageNotification' ? 'text-accent' : 'text-gray-400'
                           }`}
                         />
-                        消息通知
+                        <span className="nav-label truncate">消息通知</span>
                       </span>
                       {activeModule === 'auditMessageNotification' ? <ChevronRight className="h-4 w-4" /> : null}
                     </button>
@@ -1689,16 +1773,16 @@ export default function App() {
               onClick={() => setNavSections((s) => ({ ...s, system: !s.system }))}
               className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-50 cursor-pointer dark:text-white/40 dark:hover:bg-white/6"
             >
-              <span className="flex items-center gap-2 normal-case text-gray-800 dark:text-white/80">
-                <Settings className="h-4 w-4 text-accent" />
-                系统配置
+              <span className="flex min-w-0 items-center gap-2 normal-case text-gray-800 dark:text-white/80">
+                <Settings className="shrink-0 h-4 w-4 text-accent" />
+                <span className="nav-label truncate">系统配置</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.system ? '' : '-rotate-90'}`}
+                className={`nav-chevron h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-white/35 ${navSections.system ? '' : '-rotate-90'}`}
               />
             </button>
             {navSections.system && (
-              <div className="mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
+              <div className="nav-group-content mt-1 space-y-0.5 border-l border-line ml-3 pl-2">
                 <button
                   type="button"
                   onClick={() => selectModule('productStaff')}
@@ -1711,11 +1795,11 @@ export default function App() {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <UserCog
-                      className={`h-4 w-4 ${activeModule === 'productStaff' ? 'text-accent' : 'text-gray-400'}`}
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'productStaff' ? 'text-accent' : 'text-gray-400'}`}
                     />
-                    产研人员管理
+                    <span className="nav-label truncate">产研人员管理</span>
                   </span>
                   {activeModule === 'productStaff' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
@@ -1727,11 +1811,11 @@ export default function App() {
                     ${activeModule === 'config' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <Settings2
-                      className={`h-4 w-4 ${activeModule === 'config' ? 'text-accent' : 'text-gray-400'}`}
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'config' ? 'text-accent' : 'text-gray-400'}`}
                     />
-                    字段配置
+                    <span className="nav-label truncate">字段配置</span>
                   </span>
                   {activeModule === 'config' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
@@ -1743,39 +1827,83 @@ export default function App() {
                     ${activeModule === 'ruleDescription' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
                   `}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <HelpCircle
-                      className={`h-4 w-4 ${activeModule === 'ruleDescription' ? 'text-accent' : 'text-gray-400'}`}
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'ruleDescription' ? 'text-accent' : 'text-gray-400'}`}
                     />
-                    规则说明
+                    <span className="nav-label truncate">规则说明</span>
                   </span>
                   {activeModule === 'ruleDescription' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => selectModule('requirementPrototype')}
+            className={`
+              flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer
+              ${
+                activeModule === 'requirementPrototype'
+                  ? 'bg-accent text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-white/75 dark:hover:bg-white/8'
+              }
+            `}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <Wand2 className={`shrink-0 h-4 w-4 ${activeModule === 'requirementPrototype' ? 'text-white' : 'text-accent'}`} />
+              <span className="nav-label truncate">需求原型设计</span>
+            </span>
+            {activeModule === 'requirementPrototype' ? <ChevronRight className="h-4 w-4 text-white/90" /> : null}
+          </button>
+
         </nav>
-        
-        <div className="p-4 border-t border-line">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+
+        <div className={`border-t border-line ${isIconOnly ? 'flex flex-col items-center gap-2 py-3' : 'p-4'}`}>
+          {isIconOnly ? (
+            <>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
                 AD
               </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-medium text-gray-900 dark:text-white/85 truncate">Admin User</p>
-                <p className="text-[10px] text-gray-500 dark:text-white/45 truncate">renataluoy@gmail.com</p>
+              <button
+                type="button"
+                onClick={() => setIsDark((v) => !v)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+                title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                  AD
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs font-medium text-gray-900 dark:text-white/85 truncate">Admin User</p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/45 truncate">renataluoy@gmail.com</p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsDark((v) => !v)}
+                className="ml-2 shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+                title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsDark((v) => !v)}
-              className="ml-2 shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
-              title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
-            >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          </div>
+          )}
+        </div>
+        {/* 拖拽调宽手柄（始终可用，折叠时向右拖可展开） */}
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize group z-40"
+          onPointerDown={handleSidebarResizeStart}
+          title="拖动调整宽度"
+        >
+          <div className="absolute inset-y-0 right-0 w-1.5 bg-transparent group-hover:bg-accent/30 group-active:bg-accent/50 transition-colors" />
         </div>
       </aside>
 
@@ -2009,7 +2137,7 @@ export default function App() {
           {/* Content Area */}
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeModule}-${ganttProductLine}-${iterationRecordScope}-${leaderboardTab}-${recommendationTab}-${academyTab}-${systemProductLine}-${projectMgmtCategoryFilter}-${projectMgmtStatusFilter}-${textSearchApplied.projectMgmt.keyword}-${textSearchApplied.iterationRecord.title}-${textSearchApplied.iterationRecord.content}-${textSearchApplied.productStaff.name}-${textSearchApplied.sectGuild.keyword}-${rewardMgmtSearchApplied.businessType}-${rewardMgmtSearchApplied.projectName}-${rewardMgmtSearchApplied.userId}-${rewardMgmtSearchApplied.auditStatus}-${rewardMgmtSearchApplied.paymentStatus}-${rewardMgmtSearchApplied.importDateStart}-${rewardMgmtSearchApplied.importDateEnd}-${youboomTeamSearchApplied.leaderId}-${youboomTeamSortField}-${youboomTeamSortOrder}`}
+              key={`${activeModule}-${ganttProductLine}-${iterationRecordScope}-${iterationRecordStatusFilter}-${leaderboardTab}-${recommendationTab}-${academyTab}-${systemProductLine}-${projectMgmtCategoryFilter}-${projectMgmtStatusFilter}-${textSearchApplied.projectMgmt.keyword}-${textSearchApplied.iterationRecord.title}-${textSearchApplied.iterationRecord.content}-${textSearchApplied.productStaff.name}-${textSearchApplied.sectGuild.keyword}-${rewardMgmtSearchApplied.businessType}-${rewardMgmtSearchApplied.projectName}-${rewardMgmtSearchApplied.userId}-${rewardMgmtSearchApplied.auditStatus}-${rewardMgmtSearchApplied.paymentStatus}-${rewardMgmtSearchApplied.importDateStart}-${rewardMgmtSearchApplied.importDateEnd}-${youboomTeamSearchApplied.leaderId}-${youboomTeamSortField}-${youboomTeamSortOrder}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -2513,6 +2641,19 @@ export default function App() {
                           placeholder="按详细规则 / 其他说明纯文本筛选"
                         />
                       </label>
+                      <select
+                        value={iterationRecordStatusFilter}
+                        onChange={(e) => {
+                          setIterationRecordStatusFilter(e.target.value as typeof iterationRecordStatusFilter);
+                          setCurrentPage(1);
+                        }}
+                        className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      >
+                        <option value="all">全部状态</option>
+                        {(Object.keys(ITERATION_STATUS_LABEL) as (keyof typeof ITERATION_STATUS_LABEL)[]).map((k) => (
+                          <option key={k} value={k}>{ITERATION_STATUS_LABEL[k]}</option>
+                        ))}
+                      </select>
                     </>
                   )}
 
@@ -2977,6 +3118,30 @@ export default function App() {
 
                       {activeModule === 'rewardManagement' && (
                         <>
+                          {/* 数据统计：已审核待打款 / 已审核已打款 */}
+                          {(() => {
+                            const pendingPayment = rewardMgmtRows.filter(
+                              (r) => r.auditStatus === 'reviewed' && r.paymentStatus === 'pending_payment'
+                            );
+                            const paid = rewardMgmtRows.filter(
+                              (r) => r.auditStatus === 'reviewed' && r.paymentStatus === 'paid'
+                            );
+                            const pendingAmount = pendingPayment.reduce((s, r) => s + r.amount, 0);
+                            const paidAmount = paid.reduce((s, r) => s + r.amount, 0);
+                            const fmt = (n: number) => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            return (
+                              <div className="flex items-center gap-3 mr-1">
+                                <div className="flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1.5">
+                                  <span className="text-[10px] font-medium text-orange-600">已审核待打款</span>
+                                  <span className="text-xs font-bold text-orange-700">¥{fmt(pendingAmount)}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
+                                  <span className="text-[10px] font-medium text-emerald-600">已审核已打款</span>
+                                  <span className="text-xs font-bold text-emerald-700">¥{fmt(paidAmount)}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                           <button
                             type="button"
                             onClick={() => setRewardImportDrawerOpen(true)}
@@ -2991,15 +3156,14 @@ export default function App() {
                                 alert('请先勾选记录');
                                 return;
                               }
-                              const ts = new Date().toISOString();
-                              setRewardMgmtRows((prev) =>
-                                prev.map((r) =>
-                                  rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review'
-                                    ? { ...r, auditStatus: 'reviewed', reviewer: 'Admin User', reviewedAt: ts }
-                                    : r
-                                )
+                              const toApprove = rewardMgmtRows.filter(
+                                (r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review'
                               );
-                              setRewardMgmtSelectedIds([]);
+                              if (toApprove.length === 0) {
+                                alert('批量审核通过仅对「待审核」记录生效。');
+                                return;
+                              }
+                              setRewardApproveModalOpen(true);
                             }}
                             className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
                           >
@@ -3032,17 +3196,18 @@ export default function App() {
                                 alert('请先勾选记录');
                                 return;
                               }
-                              const ts = new Date().toISOString();
-                              setRewardMgmtRows((prev) =>
-                                prev.map((r) =>
+                              const eligible = rewardMgmtRows.filter(
+                                (r) =>
                                   rewardMgmtSelectedIds.includes(r.id) &&
                                   r.auditStatus === 'reviewed' &&
                                   r.paymentStatus === 'pending_payment'
-                                    ? { ...r, paymentStatus: 'paid', payer: 'Admin User', paidAt: ts }
-                                    : r
-                                )
                               );
-                              setRewardMgmtSelectedIds([]);
+                              if (eligible.length === 0) {
+                                alert('所选记录中无符合打款条件的数据（需审核通过且待打款）');
+                                return;
+                              }
+                              const total = eligible.reduce((s, r) => s + (r.amount ?? 0), 0);
+                              setRewardBatchPayConfirm({ count: eligible.length, total });
                             }}
                             className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
                           >
@@ -3380,6 +3545,22 @@ export default function App() {
                   <RuleDescriptionPage
                     productLine={systemProductLine}
                     filterKeyword={ruleDescSearchApplied}
+                  />
+                </div>
+              ) : activeModule === 'requirementPrototype' ? (
+                <div className="p-4 sm:p-5">
+                  <RequirementPrototypePage
+                    onPrototypeSaved={() => {}}
+                    onNavigateToModule={(module, subKey) => {
+                      selectModule(module as ModuleType);
+                      if (module === 'leaderboard' && subKey === 'community') {
+                        setLeaderboardTab('community');
+                      } else if (module === 'recommendation' && subKey) {
+                        setRecommendationTab(subKey as RecommendationTab);
+                      } else if (module === 'academy' && subKey) {
+                        setAcademyTab(subKey as AcademyTab);
+                      }
+                    }}
                   />
                 </div>
               ) : (
@@ -4574,6 +4755,26 @@ export default function App() {
         }}
       />
       <RewardPaymentQueueDrawer open={rewardPaymentQueueOpen} onClose={() => setRewardPaymentQueueOpen(false)} />
+      <RewardApproveConfirmModal
+        open={rewardApproveModalOpen}
+        count={rewardMgmtRows.filter((r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review').length}
+        totalAmount={rewardMgmtRows
+          .filter((r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review')
+          .reduce((sum, r) => sum + r.amount, 0)}
+        onConfirm={() => {
+          const ts = new Date().toISOString();
+          setRewardMgmtRows((prev) =>
+            prev.map((r) =>
+              rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'pending_review'
+                ? { ...r, auditStatus: 'reviewed' as const, reviewer: 'Admin User', reviewedAt: ts }
+                : r
+            )
+          );
+          setRewardMgmtSelectedIds([]);
+          setRewardApproveModalOpen(false);
+        }}
+        onCancel={() => setRewardApproveModalOpen(false)}
+      />
       <RewardRejectModal
         open={rewardRejectModalOpen}
         count={rewardMgmtRows.filter((r) => rewardMgmtSelectedIds.includes(r.id) && r.auditStatus === 'reviewed').length}
@@ -4597,6 +4798,82 @@ export default function App() {
         }}
         onCancel={() => setRewardRejectModalOpen(false)}
       />
+      {/* 批量打款二次确认弹窗 */}
+      <AnimatePresence>
+        {rewardBatchPayConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.18 }}
+              className="relative w-full max-w-sm mx-4 rounded-2xl bg-white dark:bg-gray-900 border border-line shadow-2xl p-6"
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white/90">确认执行批量打款？</p>
+                  <p className="text-xs text-gray-500 dark:text-white/45 mt-0.5">请核对以下信息后再确认</p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-line px-4 py-3 mb-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 dark:text-white/50">本次打款笔数</span>
+                  <span className="font-semibold text-gray-900 dark:text-white/90">{rewardBatchPayConfirm.count} 笔订单</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 dark:text-white/50">总奖励金额</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {rewardBatchPayConfirm.total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/8 border border-amber-200/60 dark:border-amber-500/20 px-3 py-2.5 mb-5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                  打款仅针对审核通过的数据进行执行，打款后可在「打款任务队列」查看打款成功和失败的情况。
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRewardBatchPayConfirm(null)}
+                  className="flex-1 py-2 rounded-xl border border-line text-sm text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ts = new Date().toISOString();
+                    setRewardMgmtRows((prev) =>
+                      prev.map((r) =>
+                        rewardMgmtSelectedIds.includes(r.id) &&
+                        r.auditStatus === 'reviewed' &&
+                        r.paymentStatus === 'pending_payment'
+                          ? { ...r, paymentStatus: 'paid' as const, payer: 'Admin User', paidAt: ts }
+                          : r
+                      )
+                    );
+                    setRewardMgmtSelectedIds([]);
+                    setRewardBatchPayConfirm(null);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-sm font-semibold text-white hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  确认打款
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {contentPreview && (
         <div

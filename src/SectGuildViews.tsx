@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { Pagination } from './Pagination';
 import { useResizableTableColumns, ColumnTipHeader } from './resizableTableColumns';
-import { Edit2, Search, Trash2 } from 'lucide-react';
+import { Edit2, ImagePlus, Search, Trash2 } from 'lucide-react';
 import type { SectGuildFormState, SectGuildRow, SectGuildStatus, SectIntroBlock, SectIntroTabKey } from './sectGuildModel';
 import { SECT_GUILD_STATUS_LABEL, SECT_INTRO_TAB_KEYS, SECT_INTRO_TAB_LABEL } from './sectGuildModel';
 import { RichTextEditor } from './RichTextEditor';
 
-const SECT_GUILD_COL_DEFAULTS = [160, 120, 100, 100, 100, 100, 120, 100, 160, 120];
+const SECT_GUILD_COL_DEFAULTS = [160, 120, 100, 160, 100, 100, 100, 120, 100, 160, 120];
 
 /** 门派管理字段说明 */
 const MT_FIELD_TIPS: Record<string, string> = {
   name: '门派在列表与详情页中的对外展示名称',
   leader: '门派负责人或对外展示的掌门昵称',
+  tags: '用于筛选和分类的自由标签，多个标签可用逗号分隔',
   status: '门派启用/停用状态，停用后前台不可访问该门派',
   totalEarnings: '演示用汇总指标，实际口径以后台数仓为准（元）',
 };
@@ -95,23 +96,24 @@ export function SectGuildTable({
               门派 icon
               {rtc.renderResizeHandle(2)}
             </th>
+            <ColumnTipHeader label="标签" tip={MT_FIELD_TIPS.tags} className={`${tableHeadClass} relative`} resizeHandle={rtc.renderResizeHandle(3)} />
             <th className={`${tableHeadRight} relative`}>
               门派项目数
-              {rtc.renderResizeHandle(3)}
-            </th>
-            <th className={`${tableHeadRight} relative`}>
-              导师数量
               {rtc.renderResizeHandle(4)}
             </th>
             <th className={`${tableHeadRight} relative`}>
-              学员总数
+              导师数量
               {rtc.renderResizeHandle(5)}
             </th>
-            <ColumnTipHeader label="学员总收益" tip={MT_FIELD_TIPS.totalEarnings} align="right" className={`${tableHeadRight} relative`} resizeHandle={rtc.renderResizeHandle(6)} />
-            <ColumnTipHeader label="状态" tip={MT_FIELD_TIPS.status} className={`${tableHeadClass} relative`} resizeHandle={rtc.renderResizeHandle(7)} />
+            <th className={`${tableHeadRight} relative`}>
+              学员总数
+              {rtc.renderResizeHandle(6)}
+            </th>
+            <ColumnTipHeader label="学员总收益" tip={MT_FIELD_TIPS.totalEarnings} align="right" className={`${tableHeadRight} relative`} resizeHandle={rtc.renderResizeHandle(7)} />
+            <ColumnTipHeader label="状态" tip={MT_FIELD_TIPS.status} className={`${tableHeadClass} relative`} resizeHandle={rtc.renderResizeHandle(8)} />
             <th className={`${tableHeadClass} relative`}>
               创建时间
-              {rtc.renderResizeHandle(8)}
+              {rtc.renderResizeHandle(9)}
             </th>
             <th className={tableHeadAction}>
               操作
@@ -131,6 +133,15 @@ export function SectGuildTable({
                     alt=""
                     className="h-10 w-10 rounded-lg border border-line object-cover"
                   />
+                ) : (
+                  <span className="text-xs text-gray-400">—</span>
+                )}
+              </td>
+              <td className="px-3 py-4 text-sm text-gray-700 sm:px-4">
+                {row.tags ? (
+                  <span className="inline-block max-w-[140px] truncate" title={row.tags}>
+                    {row.tags}
+                  </span>
                 ) : (
                   <span className="text-xs text-gray-400">—</span>
                 )}
@@ -190,6 +201,58 @@ export function SectGuildTable({
   );
 }
 
+function SectIconUploadField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pick = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (value.startsWith('blob:')) URL.revokeObjectURL(value);
+    onChange(URL.createObjectURL(file));
+  };
+  const clear = () => {
+    if (value.startsWith('blob:')) URL.revokeObjectURL(value);
+    onChange('');
+  };
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-gray-700">门派 icon</label>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-gray-50">
+          {value ? (
+            <img src={value} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">未上传</div>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <ImagePlus className="h-4 w-4 text-accent" />
+            上传图片
+          </button>
+          {value ? (
+            <button type="button" onClick={clear} className="text-left text-xs text-red-600 hover:underline">
+              清除
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <p className="text-[10px] text-gray-400">支持 jpg / png / webp，建议尺寸 96×96</p>
+    </div>
+  );
+}
+
 export function SectGuildDrawerFields({
   form,
   onPatch,
@@ -237,18 +300,19 @@ export function SectGuildDrawerFields({
           placeholder="负责人姓名"
         />
       </div>
+      <SectIconUploadField
+        value={form.iconUrl}
+        onChange={(url) => onPatch({ iconUrl: url })}
+      />
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">门派 icon</label>
+        <label className="text-sm font-medium text-gray-700">标签</label>
         <input
           type="text"
           className={inputClass}
-          value={form.iconUrl}
-          onChange={(e) => onPatch({ iconUrl: e.target.value })}
-          placeholder="图片 URL"
+          value={form.tags}
+          onChange={(e) => onPatch({ tags: e.target.value })}
+          placeholder="请输入标签，多个标签可用逗号分隔"
         />
-        {form.iconUrl ? (
-          <img src={form.iconUrl} alt="" className="mt-1 h-14 w-14 rounded-lg border border-line object-cover" />
-        ) : null}
       </div>
 
       <div className="space-y-3">

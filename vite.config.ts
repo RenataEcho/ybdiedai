@@ -104,6 +104,155 @@ function saveWorkspaceSnapshotPlugin(): Plugin {
   };
 }
 
+/**
+ * 原型设计队列：浏览器提交需求 → 写入 prototype-queue.json → Cursor 读取并实现 → 写回结果
+ * POST /__dev/api/prototype-queue/push   — 新增一条请求
+ * POST /__dev/api/prototype-queue/result — Cursor 写回 HTML 结果
+ * GET  /__dev/api/prototype-queue        — 读取当前队列
+ */
+function prototypeQueuePlugin(): Plugin {
+  const queuePath = path.resolve(__dirname, 'tmp/prototype-queue.json');
+
+  function readQueue(): unknown[] {
+    try {
+      const raw = fs.readFileSync(queuePath, 'utf8');
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }
+
+  function writeQueue(data: unknown[]): void {
+    fs.writeFileSync(queuePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  }
+
+  return {
+    name: 'prototype-queue',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0];
+        res.setHeader('Content-Type', 'application/json');
+
+        // GET — 读取队列
+        if (req.method === 'GET' && url === '/__dev/api/prototype-queue') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true, queue: readQueue() }));
+          return;
+        }
+
+        // POST push — 新增需求
+        if (req.method === 'POST' && url === '/__dev/api/prototype-queue/push') {
+          let body = '';
+          req.on('data', (c: Buffer | string) => { body += typeof c === 'string' ? c : c.toString(); });
+          req.on('end', () => {
+            try {
+              const item = JSON.parse(body || '{}') as Record<string, unknown>;
+              if (!item.id || !item.requirement) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ ok: false, error: 'missing id or requirement' }));
+                return;
+              }
+              const queue = readQueue();
+              queue.push({ ...item, status: 'pending', html: null, createdAt: Date.now(), updatedAt: Date.now() });
+              writeQueue(queue);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ ok: false, error: String(e) }));
+            }
+          });
+          return;
+        }
+
+        // POST result — 写回实现结果（Cursor 调用）
+        // 新功能需求（new-menu）：必须传 html，内容为与项目同风格的暗色主题预览页面
+        // 已有功能需求（existing-feature）：直接修改源文件，html 可省略，仅标记 done
+        if (req.method === 'POST' && url === '/__dev/api/prototype-queue/result') {
+          let body = '';
+          req.on('data', (c: Buffer | string) => { body += typeof c === 'string' ? c : c.toString(); });
+          req.on('end', () => {
+            try {
+              const { id, html } = JSON.parse(body || '{}') as { id?: string; html?: string };
+              if (!id) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ ok: false, error: 'missing id' }));
+                return;
+              }
+              const queue = readQueue() as Array<Record<string, unknown>>;
+              const idx = queue.findIndex((q) => q.id === id);
+              if (idx === -1) {
+                res.statusCode = 404;
+                res.end(JSON.stringify({ ok: false, error: 'request not found' }));
+                return;
+              }
+              const isExistingFeature = queue[idx].requirementType === 'existing-feature';
+              // 新功能需求必须有 html 预览；已有功能需求 html 可省略
+              if (!isExistingFeature && !html) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ ok: false, error: 'missing html for new-menu requirement' }));
+                return;
+              }
+              queue[idx] = { ...queue[idx], status: 'done', html: html ?? null, updatedAt: Date.now() };
+              writeQueue(queue);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ ok: false, error: String(e) }));
+            }
+          });
+          return;
+        }
+
+        // POST revert — 用户请求撤销已有功能的源文件改动
+        // 将任务状态标记为 reverted，Cursor AI 轮询到该状态后执行 git checkout / 代码还原
+        if (req.method === 'POST' && url === '/__dev/api/prototype-queue/revert') {
+          let body = '';
+          req.on('data', (c: Buffer | string) => { body += typeof c === 'string' ? c : c.toString(); });
+          req.on('end', () => {
+            try {
+              const { id } = JSON.parse(body || '{}') as { id?: string };
+              if (!id) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: 'missing id' })); return; }
+              const queue = readQueue() as Array<Record<string, unknown>>;
+              const idx = queue.findIndex((q) => q.id === id);
+              if (idx === -1) { res.statusCode = 404; res.end(JSON.stringify({ ok: false, error: 'not found' })); return; }
+              queue[idx] = { ...queue[idx], status: 'reverted', updatedAt: Date.now() };
+              writeQueue(queue);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ ok: false, error: String(e) }));
+            }
+          });
+          return;
+        }
+
+        // POST delete — 删除一条
+        if (req.method === 'POST' && url === '/__dev/api/prototype-queue/delete') {
+          let body = '';
+          req.on('data', (c: Buffer | string) => { body += typeof c === 'string' ? c : c.toString(); });
+          req.on('end', () => {
+            try {
+              const { id } = JSON.parse(body || '{}') as { id?: string };
+              if (!id) { res.statusCode = 400; res.end(JSON.stringify({ ok: false })); return; }
+              writeQueue((readQueue() as Array<Record<string, unknown>>).filter((q) => q.id !== id));
+              res.statusCode = 200;
+              res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ ok: false, error: String(e) }));
+            }
+          });
+          return;
+        }
+
+        next();
+      });
+    },
+  };
+}
+
 /** 开发时把规则说明覆盖写入 src/page-rule-description-overrides.json */
 function savePageRuleOverridesPlugin(): Plugin {
   const apiPath = '/__dev/api/save-page-rule-overrides';
@@ -177,7 +326,7 @@ export default defineConfig(({mode}) => {
       : '/';
   return {
     base,
-    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin()],
+    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin(), prototypeQueuePlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
@@ -190,6 +339,9 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      watch: {
+        ignored: ['**/tmp/prototype-queue.json'],
+      },
     },
   };
 });

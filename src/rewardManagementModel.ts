@@ -28,11 +28,21 @@ export const REWARD_WECHAT_LABEL: Record<RewardWechatNotifyStatus, string> = {
   sent: '已发送',
 };
 
+/**
+ * Seed 版本号 — 每次修改 reward-management-seed.json 内容后递增此值，
+ * localWorkspacePersistence 会检测到版本变化并自动用新 seed 覆盖 localStorage。
+ */
+export const REWARD_SEED_VERSION = 2;
+
 /** 演示：项目 ID → 名称 */
 export const REWARD_DEMO_PROJECT_NAMES: Record<string, string> = {
   YB_P_001: '春季品牌种草计划',
   YB_P_002: '海外拉新活动 A',
   YB_P_003: '口令裂变任务',
+  YB_P_004: '夏季新品推广',
+  YB_P_005: '东南亚市场拓展',
+  YB_P_006: '618大促预热',
+  YB_P_007: '欧洲市场激励计划',
 };
 
 /** 演示：项目 ID → 允许的关键词/口令列表（空数组表示该项目无关键词限制） */
@@ -40,12 +50,19 @@ export const REWARD_DEMO_PROJECT_KEYWORDS: Record<string, string[]> = {
   YB_P_001: ['春种2026', '品牌种草', 'YB_BRAND_001'],
   YB_P_002: ['invite-me', 'YB_OVERSEAS', 'haiwai2026'],
   YB_P_003: ['YBD2026', '裂变口令', 'VIRAL2026'],
+  YB_P_004: ['夏推2026'],
+  YB_P_005: ['SEA2026'],
+  YB_P_006: ['618预热'],
+  YB_P_007: ['EU2026'],
 };
 
 /** 演示：已知用户 ID 集合（导入时校验用户是否存在） */
 export const REWARD_DEMO_USER_IDS = new Set([
   'U10001', 'U10002', 'U10003', 'U10004', 'U10005',
   'U10006', 'U10007', 'U10008', 'U10009', 'U10010',
+  'U10011', 'U10012', 'U10013', 'U10014', 'U10015',
+  'U10016', 'U10017', 'U10018', 'U10019', 'U10020',
+  'U10021', 'U10022', 'U10023', 'U10024', 'U10025',
 ]);
 
 /** 生成 16 位订单 ID：时间戳(13) + 随机(3) */

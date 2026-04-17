@@ -3,7 +3,7 @@
  * 仅在 Vite 开发模式（import.meta.env.DEV）下渲染。
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { readLocalJson, STORAGE_KEYS } from './localWorkspacePersistence';
 
 const API_URL = '/__dev/api/save-workspace-snapshot';
@@ -44,6 +44,45 @@ export function DevSaveToRepo() {
   const [written, setWritten] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // 拖拽状态
+  const [pos, setPos] = useState<{ right: number; bottom: number }>({ right: 24, bottom: 24 });
+  const dragging = useRef(false);
+  const dragStart = useRef<{ mouseX: number; mouseY: number; right: number; bottom: number } | null>(null);
+  const hasDragged = useRef(false);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current = true;
+    hasDragged.current = false;
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      right: pos.right,
+      bottom: pos.bottom,
+    };
+    e.preventDefault();
+  }, [pos]);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current || !dragStart.current) return;
+      const dx = e.clientX - dragStart.current.mouseX;
+      const dy = e.clientY - dragStart.current.mouseY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+      const newRight = Math.max(8, dragStart.current.right - dx);
+      const newBottom = Math.max(8, dragStart.current.bottom - dy);
+      setPos({ right: newRight, bottom: newBottom });
+    }
+    function onMouseUp() {
+      dragging.current = false;
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   const payload = collectPayload();
 
   async function handleSave() {
@@ -77,14 +116,18 @@ export function DevSaveToRepo() {
 
   return (
     <>
-      {/* 触发按钮 */}
+      {/* 触发按钮（可拖拽） */}
       <button
-        onClick={() => { setOpen(true); setStatus('idle'); setWritten([]); setErrorMsg(''); }}
-        title="保存到仓库（开发工具）"
+        onMouseDown={onMouseDown}
+        onClick={() => {
+          if (hasDragged.current) return;
+          setOpen(true); setStatus('idle'); setWritten([]); setErrorMsg('');
+        }}
+        title="保存到仓库（开发工具）· 可拖拽调整位置"
         style={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
+          bottom: pos.bottom,
+          right: pos.right,
           zIndex: 9999,
           display: 'flex',
           alignItems: 'center',
@@ -96,9 +139,10 @@ export function DevSaveToRepo() {
           fontWeight: 700,
           fontSize: 13,
           border: 'none',
-          cursor: 'pointer',
+          cursor: dragging.current ? 'grabbing' : 'grab',
           boxShadow: '0 4px 16px rgba(99,102,241,0.45)',
           letterSpacing: 0.2,
+          userSelect: 'none',
         }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

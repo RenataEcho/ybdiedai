@@ -61,6 +61,8 @@ export interface SectGuildRow {
   name: string;
   leaderName: string;
   iconUrl: string;
+  /** 门派标签，自由文本 */
+  tags: string;
   projectCount: number;
   mentorCount: number;
   studentCount: number;
@@ -76,6 +78,7 @@ export type SectGuildFormState = {
   name: string;
   leaderName: string;
   iconUrl: string;
+  tags: string;
   intro: Record<SectIntroTabKey, SectIntroBlock>;
 };
 
@@ -84,6 +87,7 @@ export function emptySectGuildForm(): SectGuildFormState {
     name: '',
     leaderName: '',
     iconUrl: '',
+    tags: '',
     intro: defaultSectIntroTabs(),
   };
 }
@@ -93,6 +97,7 @@ export function rowToSectGuildForm(row: SectGuildRow): SectGuildFormState {
     name: row.name,
     leaderName: row.leaderName,
     iconUrl: row.iconUrl,
+    tags: row.tags ?? '',
     intro: structuredClone(row.intro),
   };
 }
@@ -112,6 +117,7 @@ export function createSectGuildRowFromForm(
     name: form.name.trim(),
     leaderName: form.leaderName.trim(),
     iconUrl: form.iconUrl.trim(),
+    tags: form.tags.trim(),
     projectCount: stats.projectCount,
     mentorCount: stats.mentorCount,
     studentCount: stats.studentCount,
@@ -137,6 +143,7 @@ export const sectGuildSeedData: SectGuildRow[] = _sectGuildFromFile.length > 0
     name: '青云门',
     leaderName: '林导师',
     iconUrl: 'https://picsum.photos/seed/sect-qing/96/96',
+    tags: '小说推文,短剧',
     projectCount: 12,
     mentorCount: 5,
     studentCount: 128,
@@ -183,6 +190,7 @@ export const sectGuildSeedData: SectGuildRow[] = _sectGuildFromFile.length > 0
     name: '赤焰堂',
     leaderName: '周导师',
     iconUrl: 'https://picsum.photos/seed/sect-chi/96/96',
+    tags: '',
     projectCount: 6,
     mentorCount: 2,
     studentCount: 45,

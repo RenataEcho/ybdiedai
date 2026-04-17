@@ -21,7 +21,7 @@ import { productStaffSeedData } from './productStaffModel';
 import type { SectGuildRow } from './sectGuildModel';
 import { sectGuildSeedData } from './sectGuildModel';
 import type { RewardManagementRow } from './rewardManagementModel';
-import { rewardManagementSeedData } from './rewardManagementModel';
+import { rewardManagementSeedData, REWARD_SEED_VERSION } from './rewardManagementModel';
 import type { ProjectManagementRow } from './projectManagementModel';
 import { projectManagementSeedData, normalizeProjectManagementDetail } from './projectManagementModel';
 import type { CustomerServiceRow } from './customerServiceModel';
@@ -37,8 +37,9 @@ export const STORAGE_KEYS = {
   pageRuleOverrides: 'ybdiedai-page-rule-overrides-v1',
   iterationRecords: 'ybdiedai-iteration-records-v1',
   productStaff: 'ybdiedai-product-staff-v2',
-  sectGuild: 'ybdiedai-sect-guild-v1',
+  sectGuild: 'ybdiedai-sect-guild-v2',
   rewardManagement: 'ybdiedai-reward-management-v1',
+  rewardManagementSeedVersion: 'ybdiedai-reward-management-seed-version',
   projectManagement: 'ybdiedai-project-management-v1',
   customerService: 'ybdiedai-customer-service-v1',
   youboomTeam: 'ybdiedai-youboom-team-v1',
@@ -221,10 +222,21 @@ export function saveSectGuildToStorage(rows: SectGuildRow[]): void {
 
 // ─── 奖励管理 ────────────────────────────────────────────────────────────────
 
+/**
+ * 加载奖励管理数据。
+ * 若 localStorage 中的 seed 版本号与当前 REWARD_SEED_VERSION 不一致，
+ * 说明 seed 文件已更新，自动用最新 seed 覆盖本地缓存并更新版本号。
+ */
 export function loadRewardManagementFromStorage(): RewardManagementRow[] {
+  const storedVersion = readLocalJson<number>(STORAGE_KEYS.rewardManagementSeedVersion);
+  const seedOutdated = storedVersion !== REWARD_SEED_VERSION;
+
   const parsed = readLocalJson<unknown>(STORAGE_KEYS.rewardManagement);
-  if (parsed === null) return [...rewardManagementSeedData];
-  if (!Array.isArray(parsed)) return [...rewardManagementSeedData];
+  if (parsed === null || !Array.isArray(parsed) || seedOutdated) {
+    writeLocalJson(STORAGE_KEYS.rewardManagementSeedVersion, REWARD_SEED_VERSION);
+    writeLocalJson(STORAGE_KEYS.rewardManagement, rewardManagementSeedData);
+    return [...rewardManagementSeedData];
+  }
   return parsed as RewardManagementRow[];
 }
 

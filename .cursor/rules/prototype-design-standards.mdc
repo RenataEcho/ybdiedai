@@ -1,0 +1,138 @@
+---
+description: 需求原型设计功能的开发规范，涵盖 HTML 主题、UI 风格、工作流、排序、缩略图等
+globs: src/RequirementPrototypePage.tsx
+alwaysApply: false
+---
+
+# 需求原型设计 — 开发规范
+
+每次生成或修改原型相关代码时，必须遵守以下规范。
+
+## 1. 原型 HTML 主题跟随系统主题（亮/暗自适应）
+
+生成的原型 HTML **不强制锁定**亮色或暗色，通过 CSS `prefers-color-scheme` 自动跟随用户系统主题。
+
+```html
+<!-- ✅ GOOD — 自适应系统主题 -->
+<style>
+  :root {
+    --bg: #f8fafc;
+    --bg-card: rgba(255,255,255,0.8);
+    --text: #1e293b;
+    --text-sub: #64748b;
+    --border: rgba(0,0,0,0.08);
+    --shadow: rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1117;
+      --bg-card: rgba(255,255,255,0.05);
+      --text: rgba(255,255,255,0.85);
+      --text-sub: rgba(255,255,255,0.45);
+      --border: rgba(255,255,255,0.08);
+      --shadow: rgba(0,0,0,0.25);
+    }
+  }
+  body { background: var(--bg); color: var(--text); }
+</style>
+
+<!-- ❌ BAD — 硬编码固定颜色，不跟随系统主题 -->
+<body style="background: #0f1117; color: #fff;">
+<body style="background: #ffffff; color: #333;">
+```
+
+## 2. UI/UX 默认玻璃拟态风格，色系跟随系统主题
+
+原型界面采用玻璃拟态：半透明卡片 + backdrop-blur + 微边框 + 简约大气科技感。
+亮色/暗色均通过 CSS 变量自适应，主色调保持蓝紫渐变（`#6366f1` → `#8b5cf6`）。
+
+```css
+/* ✅ GOOD — 玻璃拟态，自适应主题 */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px var(--shadow);
+}
+
+/* 主色调（亮/暗均适用） */
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+}
+```
+
+## 3. 完整工作流说明
+
+### 新功能需求（new-menu）工作流
+
+```
+用户描述需求
+  → AI 生成自适应主题的 HTML 原型预览（必须提供 html 字段）
+  → 用户在「页面预览」tab 查看
+  → 用户点「加入菜单」→ 弹窗确认菜单路径
+  → 确认后 → 触发 AI 将 HTML 原型转换为系统前端语言（TSX）并集成到对应菜单下
+```
+
+### 已有功能需求（existing-feature）工作流
+
+```
+用户选择要调整的菜单 + 描述需求
+  → AI 直接修改对应源文件（无需生成 html）
+  → 用户在对话中看到「已完成修改，请确认」提示
+  → 用户点「确认使用」→ 记录保存，加入菜单（修改保留）
+  → 用户点「撤销修改」→ 触发 AI 将源文件改动全部还原
+```
+
+### 队列任务类型（requirementType）
+
+| 值 | 含义 | html 是否必须 |
+|---|---|---|
+| `new-menu` | 新功能，生成 HTML 原型预览 | ✅ 必须 |
+| `existing-feature` | 已有功能，直接修改源文件 | ❌ 不需要 |
+
+## 4. 生成记录排序默认倒序（最新在前）
+
+原型队列列表、已保存原型列表，渲染时均按 `createdAt` 或 `updatedAt` **降序**排列。
+
+```ts
+// ✅ GOOD — 倒序：最新记录在最前
+const sorted = [...items].sort((a, b) => b.createdAt - a.createdAt);
+
+// ❌ BAD — 正序或不排序
+const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
+```
+
+涉及文件：队列渲染、已保存原型列表 (`savedPrototypes`)，两处均需倒序。
+
+## 5. 已保存原型不显示 HTML 缩略图，改用随机简约图标占位
+
+已保存的原型卡片中，**禁止**嵌入 `<iframe>` 或任何原型 HTML 的缩略预览。
+改用从固定图标集中随机取一个，作为简约图标占位符。
+
+```tsx
+// ✅ GOOD — 随机图标占位
+import { Monitor, Layers, Zap, Globe, Rocket, TrendingUp, Users, GraduationCap, Cpu, Bot } from 'lucide-react';
+
+const PLACEHOLDER_ICONS = [Monitor, Layers, Zap, Globe, Rocket, TrendingUp, Users, GraduationCap, Cpu, Bot];
+
+function getPlaceholderIcon(id: string) {
+  const idx = id.charCodeAt(0) % PLACEHOLDER_ICONS.length;
+  return PLACEHOLDER_ICONS[idx];
+}
+
+// 渲染
+const Icon = getPlaceholderIcon(prototype.id);
+<div style={{ width: 64, height: 64, borderRadius: 16,
+  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <Icon size={28} color="#fff" />
+</div>
+
+// ❌ BAD — iframe 缩略图（性能差、样式污染）
+<iframe src="..." style={{ transform: 'scale(0.25)', pointerEvents: 'none' }} />
+```
+
+图标颜色统一使用蓝紫渐变背景 + 白色图标，与整体科技感保持一致。

@@ -568,6 +568,82 @@ export function RewardPaymentQueueDrawer({ open, onClose }: { open: boolean; onC
   );
 }
 
+/** 批量审核通过确认弹窗 */
+export function RewardApproveConfirmModal({
+  open,
+  count,
+  totalAmount,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  count: number;
+  totalAmount: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onCancel}
+            className="fixed inset-0 z-[50] bg-black/30 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="fixed left-1/2 top-1/2 z-[51] w-[min(90vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              </div>
+              <h3 className="text-base font-bold text-ink">确认批量审核通过</h3>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3.5 space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">审核通过笔数</span>
+                <span className="font-semibold text-gray-900">
+                  <span className="text-emerald-600 text-base font-bold">{count}</span> 笔
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">奖励总额</span>
+                <span className="font-semibold text-gray-900">
+                  ¥<span className="text-emerald-600 text-base font-bold">{formatMoney(totalAmount)}</span>
+                </span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-400">审核通过后记录状态将更新为「已审核」，可进一步发起打款。</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex-1 rounded-lg border border-line py-2 text-sm font-medium hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+              >
+                确认通过
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /** 批量审核驳回弹窗 */
 export function RewardRejectModal({
   open,
