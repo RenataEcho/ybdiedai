@@ -8,12 +8,10 @@
     "subRequirements": [
       {
         "id": "isr-1776160704193-0-5b73",
-        "title": "新增榜单数据",
-        "descriptionHtml": "<p><br></p>",
+        "title": "客户端和后台均新增榜单数据",
+        "descriptionHtml": "<ol><li><p>时间统计纬度:7日、30日(每小时更新一次)</p></li><li><p>个人榜</p><ol><li><p>个人琅琊榜:用户个人项目总收益TOP-10</p></li><li><p>个人英雄榜:先个人总收益,再查询个人收益里的单项目收益排行</p></li><li><p>团队榜</p><ol><li><p>团队逐鹿榜:以V3团长为纬度统计.团队总收益TOP-10</p></li><li><p>团队封神榜:以团队收益统计为纬度区分团队里单项目收益排行;支持选择项目</p></li><li><p>注意:暂时去掉“咨询加入”入口</p></li></ol></li></ol></li><li><p>品牌社群榜</p></li><li><p>对接导师系统:具体看下方导师系统需求</p><ol><li><p>导师系统新增模块“社群管理”</p></li><li><p>配置字段:社群头像、社群名称、社群类型、社群公告、社群介绍、专精项目、战绩榜、社群案例<br><p>【图片已移除，请重新上传】</p></p></li></ol></li></ol><p><p>【图片已移除，请重新上传】</p></p>",
         "priority": "SSS",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -29,12 +27,10 @@
       },
       {
         "id": "isr-1776160704193-1-76ac",
-        "title": "新增首页推荐",
-        "descriptionHtml": "<p><br></p>",
+        "title": "客户端和后台均新增首页推荐",
+        "descriptionHtml": "<p><strong>品牌推荐:</strong></p><ol><li><p>常驻模块:官方任务台(原有的任务台)、知乎专题(原有的专题)</p></li><li><p>品牌任务支持列表和宫格样式的切换</p></li><li><p>推荐算法:按照收益权重和是否热门项目的权重进行算法推荐</p></li><li><p><strong>品牌推荐</strong></p><ol><li><p>权重分数值倒序排列=收益数据 <em>0.5+ 题词数据</em>0.3 + 策略分*0.2 + 随机分*0.1</p></li><li><p>收益数据=前一日的收益数值</p></li><li><p>题词数据=前一日的题词数量(审核通过的)</p></li><li><p>策略分:根据后台设置字段进行分数计算</p><ol><li><p>设置为热门项目策略分=1;</p></li><li><p>非热门项目策略分=0.5</p></li></ol></li><li><p>随机分:</p><ol><li><p>新上线项目随机分=1</p></li><li><p>非新上线项目随机分=0.5</p></li></ol></li></ol></li><li><p>推荐数量:10个项目</p></li><li><p><strong>剧作推荐:注意,此模块的更多icon是一个排序功能,点击可对分类tag进行排序(排序需要存服务器)</strong></p><ol><li><p>分类tag:后台传名称、排序、显隐状态</p></li><li><p>权重分数值倒序排列=今日预估收益数据 <em>0.7+ + 策略分</em>0.2 + 随机分*0.1</p></li><li><p>策略分:根据后台设置字段进行分数计算</p><ol><li><p>设置为热门书/剧策略分=1;</p></li><li><p>非热门书/剧策略分=0.5</p></li></ol></li><li><p>随机分:</p><ol><li><p>新上线书/剧随机分=1</p></li><li><p>非新上线书/剧随机分=0.5<br><p>【图片已移除，请重新上传】</p><p>【图片已移除，请重新上传】</p></p></li></ol></li></ol></li></ol><p><p>【图片已移除，请重新上传】</p></p>",
         "priority": "SS",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -49,12 +45,10 @@
       },
       {
         "id": "isr-1776160704193-2-21c6",
-        "title": "学院管理优化",
-        "descriptionHtml": "<p><br></p>",
+        "title": "客户端和后台均学院管理优化",
+        "descriptionHtml": "<ol><li><p>新增“团队收益”、“团队奖励”tab:该tab切换与个人收益样式一致,但是没有项目收益的“明细”按钮入口</p></li><li><p>右豹学院:原来的商学院;样式调整、新增5个小金刚</p><ol><li><p>顶部的三个bn位仍使用老接口即可</p></li><li><p>5个小金刚的详情页参考页面上滑样式</p><ol><li><p>页面title换成小金刚的名称</p></li><li><p>有搜索但是没有分类tab,只需要内容卡片展示即可</p></li></ol></li></ol></li><li><p>后台优化:分类新增字段“是否金刚区”</p></li><li><p>后台优化:内容配置增加字段:关联项目、类型(图文/视频);批量上传需要显示上传状态</p></li></ol><p><p>【图片已移除，请重新上传】</p><p>【图片已移除，请重新上传】</p></p>",
         "priority": "S",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -69,12 +63,10 @@
       },
       {
         "id": "isr-1776160704193-3-8b83",
-        "title": "项目管理详情优化",
+        "title": "客户端和后台均项目管理详情优化",
         "descriptionHtml": "<p><br></p>",
         "priority": "A",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -91,9 +83,7 @@
         "title": "对接导师系统api",
         "descriptionHtml": "<p><br></p>",
         "priority": "SSS",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-5",
@@ -110,9 +100,7 @@
         "title": "小程序整体前端对齐APP样式和接口",
         "descriptionHtml": "<p><br></p>",
         "priority": "SSS",
-        "productOwnerIds": [
-          "ps-4"
-        ],
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -125,9 +113,7 @@
         "status": "in_progress"
       }
     ],
-    "parentProductOwnerIds": [
-      "ps-4"
-    ],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-3",
@@ -138,7 +124,7 @@
     "detailRulesHtml": "<p>1、榜单数据:个人top-10;团队TOP-10;社群top-10;</p><p>1.1、按用户收益纬度和项目收益纬度</p><p>1.2、社群榜单需要对接导师系统api,导师系统需求见导师迭代记录</p><p>2、首页推荐:项目、任务推荐feed流,基于基础算法推荐</p><p>3、学院管理:增加小金刚区;增加内容类型:图文、视频</p><p>4、项目管理优化详情配置;支持自定义标题、副标题、显示/隐藏</p><p>5、对接导师系统api:主要涉及品牌社群、加入社群时显示的二维码</p>",
     "status": "in_progress",
     "releaseTime": "",
-    "notesHtml": "<p>前端具体规则说明看飞书文档:https://mqv7erfldf.feishu.cn/wiki/Qki8wgLA3iHjt0kp1tccXciNnCd?from=from_copylink</p>",
+    "notesHtml": "<p>前端具体规则说明看飞书文档:<a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"text-accent underline cursor-pointer\" href=\"https://mqv7erfldf.feishu.cn/wiki/Qki8wgLA3iHjt0kp1tccXciNnCd?from=from_copylink\">https://mqv7erfldf.feishu.cn/wiki/Qki8wgLA3iHjt0kp1tccXciNnCd?from=from_copylink</a></p>",
     "createdAt": "2026-03-28T08:00:00.000Z"
   },
   {
@@ -151,7 +137,7 @@
       {
         "id": "isr-1776230785571-0-084e",
         "title": "后台增加奖励管理",
-        "descriptionHtml": "<p><br></p>",
+        "descriptionHtml": "",
         "priority": "A",
         "productOwnerIds": [],
         "assigneeIds": [
@@ -165,7 +151,7 @@
       {
         "id": "isr-1776230785571-1-3e8e",
         "title": "前端增加奖励钱包",
-        "descriptionHtml": "<p><br></p>",
+        "descriptionHtml": "",
         "priority": "A",
         "productOwnerIds": [],
         "assigneeIds": [
@@ -218,69 +204,70 @@
       {
         "id": "isr-1776232264846-0-35a7",
         "title": "新增门派管理:门派信息配置",
+        "descriptionHtml": "",
         "priority": "SSS",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-5"
         ],
         "dateStart": "2026-04-15",
         "dateEnd": "2026-04-17",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "pending"
       },
       {
         "id": "isr-1776232264846-1-ba7f",
         "title": "新增客服管理:客服配置",
+        "descriptionHtml": "",
         "priority": "SS",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-5"
         ],
         "dateStart": "2026-04-15",
         "dateEnd": "2026-04-17",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "pending"
       },
       {
         "id": "isr-1776232264846-2-5c81",
         "title": "新增信息录入审核",
+        "descriptionHtml": "",
         "priority": "SS",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-5"
         ],
         "dateStart": "2026-04-20",
         "dateEnd": "2026-04-21",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "pending"
       },
       {
         "id": "isr-1776232264846-3-55eb",
         "title": "导师管理增加字段“所属门派”、“导师二维码”",
+        "descriptionHtml": "",
         "priority": "SS",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-5"
         ],
         "dateStart": "2026-04-17",
-        "dateEnd": "2026-04-17",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "dateEnd": "2026-04-18",
+        "status": "pending"
       },
       {
         "id": "isr-1776233490730-4-9e1b",
         "title": "新增消息推送",
+        "descriptionHtml": "",
         "priority": "B",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-5"
         ],
         "dateStart": "2026-04-22",
         "dateEnd": "2026-04-24",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "pending"
       }
     ],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-3",
@@ -292,8 +279,7 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p>待开发</p>",
-    "createdAt": "2026-04-14T09:00:00.000Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-14T09:00:00.000Z"
   },
   {
     "id": "ir-1776160209279",
@@ -302,6 +288,7 @@
     "priority": "SS",
     "version": "",
     "subRequirements": [],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-2",
       "ps-3"
@@ -312,8 +299,7 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-14T09:50:09.279Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-14T09:50:09.279Z"
   },
   {
     "id": "ir-1776161825123",
@@ -325,19 +311,20 @@
       {
         "id": "isr-1776226008419-0-76ef",
         "title": "对接新版分销体系;注意新老分销版本的数据切换",
+        "descriptionHtml": "",
         "priority": "SSS",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-1",
           "ps-3",
           "ps-7"
         ],
-        "dateStart": "2026-04-20",
-        "dateEnd": "2026-04-24",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "dateStart": "2026-04-12",
+        "dateEnd": "2026-04-16",
+        "status": "pending"
       }
     ],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-3",
@@ -350,8 +337,7 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-14T10:17:05.123Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-14T10:17:05.123Z"
   },
   {
     "id": "ir-1776233735007",
@@ -360,6 +346,7 @@
     "priority": "A",
     "version": "",
     "subRequirements": [],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-3",
@@ -375,8 +362,7 @@
     "status": "in_progress",
     "releaseTime": "",
     "notesHtml": "<p>穿插需求太多,已delay</p>",
-    "createdAt": "2026-04-15T06:15:35.007Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-15T06:15:35.007Z"
   },
   {
     "id": "ir-1776238217657",
@@ -385,6 +371,7 @@
     "priority": "A",
     "version": "",
     "subRequirements": [],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-3",
@@ -392,14 +379,13 @@
       "ps-9",
       "ps-10"
     ],
-    "parentDateStart": "2026-04-27",
-    "parentDateEnd": "2026-04-30",
+    "parentDateStart": "2026-04-18",
+    "parentDateEnd": "2026-04-21",
     "detailRulesHtml": "<p>右豹中台增加基Dashboard,方便运营监测数据</p>",
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p>右豹中台增加基Dashboard,方便运营监测数据</p>",
-    "createdAt": "2026-04-15T07:30:17.658Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-15T07:30:17.658Z"
   },
   {
     "id": "ir-1776241008136",
@@ -411,26 +397,27 @@
       {
         "id": "isr-1776241008136-0-6c77",
         "title": "多项目订单合并",
+        "descriptionHtml": "",
         "priority": "S",
+        "productOwnerIds": [],
         "assigneeIds": [],
         "dateStart": "2026-04-13",
         "dateEnd": "2026-04-17",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "in_progress"
       },
       {
         "id": "isr-1776241008136-1-3800",
         "title": "提现记录增加字段",
+        "descriptionHtml": "",
         "priority": "A",
+        "productOwnerIds": [],
         "assigneeIds": [],
         "dateStart": "2026-04-13",
         "dateEnd": "2026-04-17",
-        "status": "pending",
-        "descriptionHtml": "<p><br></p>",
-        "productOwnerIds": []
+        "status": "in_progress"
       }
     ],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [],
     "parentDateStart": "",
     "parentDateEnd": "",
@@ -438,8 +425,7 @@
     "status": "in_progress",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-15T08:16:48.136Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-15T08:16:48.136Z"
   },
   {
     "id": "ir-1776242409295",
@@ -448,6 +434,7 @@
     "priority": "B",
     "version": "",
     "subRequirements": [],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-7",
@@ -460,7 +447,6 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-15T08:40:09.296Z",
-    "parentProductOwnerIds": []
+    "createdAt": "2026-04-15T08:40:09.296Z"
   }
 ]

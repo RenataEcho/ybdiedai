@@ -349,6 +349,90 @@ function prototypeQueuePlugin(): Plugin {
   };
 }
 
+/**
+ * 开发时图片上传：把文件保存到 public/uploads/，返回可访问的静态 URL。
+ * POST /__dev/api/upload-image  multipart/form-data, field: file
+ * 线上 GitHub Pages 静态部署时图片随 public/ 一起发布，URL 同样有效。
+ */
+function uploadImagePlugin(): Plugin {
+  const apiPath = '/__dev/api/upload-image';
+  return {
+    name: 'upload-image',
+    configureServer(server) {
+      const uploadsDir = path.resolve(__dirname, 'public/uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0];
+        if (req.method !== 'POST' || url !== apiPath) { next(); return; }
+        const chunks: Buffer[] = [];
+        req.on('data', (c: Buffer) => chunks.push(c));
+        req.on('end', () => {
+          try {
+            const body = Buffer.concat(chunks);
+            // 解析 multipart/form-data
+            const contentType = req.headers['content-type'] ?? '';
+            const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+            if (!boundaryMatch) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'missing boundary' }));
+              return;
+            }
+            const boundary = Buffer.from(`--${boundaryMatch[1]}`);
+            const parts: Buffer[] = [];
+            let start = 0;
+            while (start < body.length) {
+              const idx = body.indexOf(boundary, start);
+              if (idx === -1) break;
+              const partStart = idx + boundary.length;
+              if (partStart >= body.length) break;
+              // skip \r\n after boundary
+              const contentStart = partStart + 2;
+              const nextBoundary = body.indexOf(boundary, contentStart);
+              if (nextBoundary === -1) break;
+              parts.push(body.slice(contentStart, nextBoundary - 2)); // trim \r\n before next boundary
+              start = nextBoundary;
+            }
+            let fileBuffer: Buffer | null = null;
+            let filename = '';
+            let mimeType = 'image/png';
+            for (const part of parts) {
+              const headerEnd = part.indexOf('\r\n\r\n');
+              if (headerEnd === -1) continue;
+              const headerStr = part.slice(0, headerEnd).toString();
+              if (!headerStr.includes('name="file"')) continue;
+              const fnMatch = headerStr.match(/filename="([^"]+)"/);
+              filename = fnMatch ? fnMatch[1] : `img-${Date.now()}.png`;
+              const mimeMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
+              if (mimeMatch) mimeType = mimeMatch[1].trim();
+              fileBuffer = part.slice(headerEnd + 4);
+              break;
+            }
+            if (!fileBuffer || fileBuffer.length === 0) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'no file found in request' }));
+              return;
+            }
+            // 用时间戳避免文件名冲突
+            const ext = path.extname(filename) || (mimeType.includes('png') ? '.png' : mimeType.includes('gif') ? '.gif' : mimeType.includes('webp') ? '.webp' : '.jpg');
+            const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+            const outPath = path.join(uploadsDir, safeName);
+            fs.writeFileSync(outPath, fileBuffer);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, url: `/uploads/${safeName}` }));
+          } catch (e) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: String(e) }));
+          }
+        });
+      });
+    },
+  };
+}
+
 /** 开发时把规则说明覆盖写入 src/page-rule-description-overrides.json */
 function savePageRuleOverridesPlugin(): Plugin {
   const apiPath = '/__dev/api/save-page-rule-overrides';
@@ -422,7 +506,7 @@ export default defineConfig(({mode}) => {
       : '/';
   return {
     base,
-    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin(), prototypeQueuePlugin()],
+    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin(), prototypeQueuePlugin(), uploadImagePlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

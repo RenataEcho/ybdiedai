@@ -437,12 +437,29 @@ export function RichTextEditor({
   /* ── 图片处理 ── */
   const insertImageFile = useCallback((file: File) => {
     if (!editor) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const src = e.target?.result as string;
-      if (src) editor.chain().focus().setResizableImage({ src, alt: file.name }).run();
+    // 开发模式：优先上传到 public/uploads/，获得稳定的静态 URL
+    const tryUpload = async () => {
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch('/__dev/api/upload-image', { method: 'POST', body: form });
+        if (res.ok) {
+          const json = await res.json() as { ok: boolean; url?: string };
+          if (json.ok && json.url) {
+            editor.chain().focus().setResizableImage({ src: json.url, alt: file.name }).run();
+            return;
+          }
+        }
+      } catch { /* 接口不可用时降级 base64 */ }
+      // 降级：base64（线上 GitHub Pages 或接口失败时）
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const src = e.target?.result as string;
+        if (src) editor.chain().focus().setResizableImage({ src, alt: file.name }).run();
+      };
+      reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
+    void tryUpload();
   }, [editor]);
 
   const insertImageUrl = (url: string) => {
