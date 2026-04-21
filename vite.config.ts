@@ -361,6 +361,24 @@ function uploadImagePlugin(): Plugin {
     configureServer(server) {
       const uploadsDir = path.resolve(__dirname, 'public/uploads');
       if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      // GET /uploads/* — 直接提供静态图片文件，优先于 SPA fallback
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        if (req.method !== 'GET' || !url.startsWith('/uploads/')) { next(); return; }
+        const filename = path.basename(url);
+        const filePath = path.join(uploadsDir, filename);
+        if (!fs.existsSync(filePath)) { next(); return; }
+        const ext = path.extname(filename).toLowerCase();
+        const mimeMap: Record<string, string> = {
+          '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+        };
+        res.setHeader('Content-Type', mimeMap[ext] ?? 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.statusCode = 200;
+        fs.createReadStream(filePath).pipe(res);
+      });
+
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0];
         if (req.method !== 'POST' || url !== apiPath) { next(); return; }

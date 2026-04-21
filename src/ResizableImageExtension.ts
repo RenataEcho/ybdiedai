@@ -97,16 +97,26 @@ export const ResizableImageExtension = Node.create({
               const { schema } = view.state;
               const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? 0;
               images.forEach((image) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  const src = e.target?.result as string;
-                  if (!src) return;
+                const insertImage = (src: string) => {
                   const nodeType = schema.nodes['resizableImage'];
                   if (!nodeType) return;
                   const node = nodeType.create({ src, alt: image.name });
                   view.dispatch(view.state.tr.insert(pos, node));
                 };
-                reader.readAsDataURL(image);
+                // 优先走上传接口，失败降级 base64
+                const form = new FormData();
+                form.append('file', image);
+                fetch('/__dev/api/upload-image', { method: 'POST', body: form })
+                  .then((r) => r.ok ? r.json() as Promise<{ ok: boolean; url?: string }> : Promise.reject())
+                  .then((json) => {
+                    if (json.ok && json.url) { insertImage(json.url); return; }
+                    throw new Error('no url');
+                  })
+                  .catch(() => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => { const src = e.target?.result as string; if (src) insertImage(src); };
+                    reader.readAsDataURL(image);
+                  });
               });
               return true;
             },

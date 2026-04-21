@@ -24,7 +24,9 @@ export function ResizableImageView({ node, selected, updateAttributes, editor }:
   const startW = useRef(0);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // 未设置宽度时默认最大 500px，避免超大图片撑满编辑区
   const displayWidth = width ?? undefined;
+  const defaultMaxWidth = width ? undefined : 500;
 
   const onHandlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -82,7 +84,7 @@ export function ResizableImageView({ node, selected, updateAttributes, editor }:
         style={{
           display: 'block',
           width: displayWidth ? `${displayWidth}px` : undefined,
-          maxWidth: '100%',
+          maxWidth: displayWidth ? '100%' : `${defaultMaxWidth}px`,
           height: 'auto',
           borderRadius: 6,
           outline: selected ? '2px solid #6366f1' : 'none',
