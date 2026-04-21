@@ -1,8 +1,8 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, type ChangeEvent } from 'react';
 import { Pagination } from './Pagination';
 import { useResizableTableColumns, ColumnTipHeader } from './resizableTableColumns';
-import { Edit2, ImagePlus, Search, Trash2 } from 'lucide-react';
-import type { SectGuildFormState, SectGuildRow, SectGuildStatus, SectIntroBlock, SectIntroTabKey } from './sectGuildModel';
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Edit2, ImagePlus, Search, Trash2, X } from 'lucide-react';
+import type { SectGuildFormState, SectGuildProjectItem, SectGuildRow, SectGuildStatus, SectIntroBlock, SectIntroTabKey } from './sectGuildModel';
 import { SECT_GUILD_STATUS_LABEL, SECT_INTRO_TAB_KEYS, SECT_INTRO_TAB_LABEL } from './sectGuildModel';
 import { RichTextEditor } from './RichTextEditor';
 
@@ -60,6 +60,213 @@ function EmptyState() {
   );
 }
 
+type ProjectSortField = 'earnings7d' | 'earnings30d' | 'earningsTotal' | 'dataUpdatedAt';
+type SortOrder = 'asc' | 'desc';
+
+function SortIcon({ field, current, order }: { field: ProjectSortField; current: ProjectSortField | null; order: SortOrder }) {
+  if (current !== field) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-gray-300" />;
+  if (order === 'asc') return <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-accent" />;
+  return <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-accent" />;
+}
+
+function exportProjectsCsv(rows: SectGuildProjectItem[], sectName: string) {
+  const headers = ['项目ID', '项目名称', '项目类型', '近7日收益(元)', '近30日收益(元)', '总收益(元)', '数据更新时间'];
+  const lines = [
+    headers.join(','),
+    ...rows.map((r) =>
+      [
+        r.projectId,
+        `"${r.projectName}"`,
+        r.projectType,
+        r.earnings7d,
+        r.earnings30d,
+        r.earningsTotal,
+        `"${formatLocal(r.dataUpdatedAt)}"`,
+      ].join(',')
+    ),
+  ];
+  const csv = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `门派项目明细_${sectName}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function SectGuildProjectsModal({
+  sectName,
+  projects,
+  onClose,
+}: {
+  sectName: string;
+  projects: SectGuildProjectItem[];
+  onClose: () => void;
+}) {
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState<ProjectSortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+  const handleSort = (field: ProjectSortField) => {
+    if (sortField === field) {
+      setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    let list = q ? projects.filter((p) => p.projectName.toLowerCase().includes(q)) : projects;
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        const av = sortField === 'dataUpdatedAt' ? new Date(a[sortField]).getTime() : (a[sortField] as number);
+        const bv = sortField === 'dataUpdatedAt' ? new Date(b[sortField]).getTime() : (b[sortField] as number);
+        return sortOrder === 'desc' ? bv - av : av - bv;
+      });
+    }
+    return list;
+  }, [projects, keyword, sortField, sortOrder]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl dark:bg-[#1e2232]">
+        {/* 头部 */}
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white/90">{sectName} — 项目明细</h2>
+            <p className="mt-0.5 text-xs text-gray-400">共 {projects.length} 个项目，当前显示 {filtered.length} 条</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* 工具栏 */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-6 py-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜索项目名称"
+              className="w-full rounded-lg border border-line py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-accent/20"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => exportProjectsCsv(filtered, sectName)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:bg-[#252a3a] dark:text-white/80 dark:hover:bg-[#2d3348]"
+          >
+            <Download className="h-4 w-4" />
+            导出数据表
+          </button>
+        </div>
+
+        {/* 表格 */}
+        <div className="min-h-0 flex-1 overflow-auto">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+              <Search className="mb-3 h-8 w-8 opacity-20" />
+              <p className="text-sm">暂无匹配项目</p>
+            </div>
+          ) : (
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead className="sticky top-0 z-10 border-b border-line bg-gray-50/95 backdrop-blur-sm dark:bg-[#252a3a]/95">
+                <tr>
+                  <th className="px-4 py-3 font-bold text-gray-700 dark:text-white/80">项目ID</th>
+                  <th className="px-4 py-3 font-bold text-gray-700 dark:text-white/80">项目Icon</th>
+                  <th className="px-4 py-3 font-bold text-gray-700 dark:text-white/80">项目名称</th>
+                  <th className="px-4 py-3 font-bold text-gray-700 dark:text-white/80">项目类型</th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 text-right font-bold text-gray-700 dark:text-white/80 hover:text-accent"
+                    onClick={() => handleSort('earnings7d')}
+                  >
+                    近7日收益
+                    <SortIcon field="earnings7d" current={sortField} order={sortOrder} />
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 text-right font-bold text-gray-700 dark:text-white/80 hover:text-accent"
+                    onClick={() => handleSort('earnings30d')}
+                  >
+                    近30日收益
+                    <SortIcon field="earnings30d" current={sortField} order={sortOrder} />
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 text-right font-bold text-gray-700 dark:text-white/80 hover:text-accent"
+                    onClick={() => handleSort('earningsTotal')}
+                  >
+                    总收益
+                    <SortIcon field="earningsTotal" current={sortField} order={sortOrder} />
+                  </th>
+                  <th
+                    className="cursor-pointer select-none px-4 py-3 text-right font-bold text-gray-700 dark:text-white/80 hover:text-accent"
+                    onClick={() => handleSort('dataUpdatedAt')}
+                  >
+                    数据更新时间
+                    <SortIcon field="dataUpdatedAt" current={sortField} order={sortOrder} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {filtered.map((item) => (
+                  <tr key={item.projectId} className="group transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.projectId}</td>
+                    <td className="px-4 py-3">
+                      {item.projectIcon ? (
+                        <img src={item.projectIcon} alt="" className="h-9 w-9 rounded-lg border border-line object-cover" />
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="max-w-[180px] px-4 py-3 font-medium text-gray-800 dark:text-white/85">
+                      <span className="line-clamp-2">{item.projectName}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                        {item.projectType}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-gray-700 dark:text-white/70">
+                      ¥{formatMoney(item.earnings7d)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-gray-700 dark:text-white/70">
+                      ¥{formatMoney(item.earnings30d)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-gray-800 dark:text-white/85">
+                      ¥{formatMoney(item.earningsTotal)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-xs text-gray-500">
+                      {formatLocal(item.dataUpdatedAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* 底部统计 */}
+        <div className="flex items-center justify-between border-t border-line px-6 py-3 text-xs text-gray-400">
+          <span>
+            近7日合计：<span className="font-medium text-gray-700 dark:text-white/70">¥{formatMoney(filtered.reduce((s, r) => s + r.earnings7d, 0))}</span>
+            <span className="mx-3">·</span>
+            近30日合计：<span className="font-medium text-gray-700 dark:text-white/70">¥{formatMoney(filtered.reduce((s, r) => s + r.earnings30d, 0))}</span>
+            <span className="mx-3">·</span>
+            总收益合计：<span className="font-semibold text-accent">¥{formatMoney(filtered.reduce((s, r) => s + r.earningsTotal, 0))}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SectGuildTable({
   data,
   currentPage,
@@ -68,6 +275,7 @@ export function SectGuildTable({
   onPageSizeChange,
   onEdit,
   onDelete,
+  projectsMap,
 }: {
   data: SectGuildRow[];
   currentPage: number;
@@ -76,12 +284,22 @@ export function SectGuildTable({
   onPageSizeChange: (size: number) => void;
   onEdit: (row: SectGuildRow) => void;
   onDelete: (row: SectGuildRow) => void;
+  projectsMap?: Record<string, import('./sectGuildModel').SectGuildProjectItem[]>;
 }) {
+  const [projectsModal, setProjectsModal] = useState<{ sectName: string; projects: import('./sectGuildModel').SectGuildProjectItem[] } | null>(null);
   const rtc = useResizableTableColumns('sect-guild', SECT_GUILD_COL_DEFAULTS);
   if (data.length === 0) return <EmptyState />;
   const paginated = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
+    <>
+    {projectsModal && (
+      <SectGuildProjectsModal
+        sectName={projectsModal.sectName}
+        projects={projectsModal.projects}
+        onClose={() => setProjectsModal(null)}
+      />
+    )}
     <div className="overflow-x-auto overflow-y-visible">
       <table
         className="app-data-table app-data-table--resizable w-full min-w-0 border-collapse text-left"
@@ -146,8 +364,18 @@ export function SectGuildTable({
                   <span className="text-xs text-gray-400">—</span>
                 )}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-right text-sm text-gray-700 sm:px-4">
-                {row.projectCount}
+              <td className="whitespace-nowrap px-3 py-4 text-right text-sm sm:px-4">
+                {projectsMap && projectsMap[row.id] ? (
+                  <button
+                    type="button"
+                    onClick={() => setProjectsModal({ sectName: row.name, projects: projectsMap[row.id] })}
+                    className="font-medium text-accent underline-offset-2 hover:underline"
+                  >
+                    {row.projectCount}
+                  </button>
+                ) : (
+                  <span className="text-gray-700">{row.projectCount}</span>
+                )}
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-right text-sm text-gray-700 sm:px-4">
                 {row.mentorCount}
@@ -198,6 +426,7 @@ export function SectGuildTable({
         onPageSizeChange={onPageSizeChange}
       />
     </div>
+    </>
   );
 }
 

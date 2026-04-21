@@ -82,51 +82,56 @@ function parseSubRequirement(x: unknown): IterationSubRequirementRow | null {
   const o = x as Record<string, unknown>;
   if (typeof o.id !== 'string' || !o.id) return null;
   if (typeof o.title !== 'string') return null;
-  if (!isStringArray(o.assigneeIds)) return null;
-  if (typeof o.dateStart !== 'string' || typeof o.dateEnd !== 'string') return null;
-  if (typeof o.status !== 'string' || !STATUSES.has(o.status as IterationStatus)) return null;
+  // dateStart/dateEnd 缺失时兼容为空字符串
+  const dateStart = typeof o.dateStart === 'string' ? o.dateStart : '';
+  const dateEnd = typeof o.dateEnd === 'string' ? o.dateEnd : '';
+  // status 缺失或非法时兼容为 pending
+  const status: IterationStatus = (typeof o.status === 'string' && STATUSES.has(o.status as IterationStatus))
+    ? (o.status as IterationStatus)
+    : 'pending';
   return {
     id: o.id,
     title: o.title,
+    // descriptionHtml 是后加字段，旧数据中可能缺失，兼容处理为空字符串
+    descriptionHtml: typeof o.descriptionHtml === 'string' ? o.descriptionHtml : '',
     priority: parseIterationPriority(o.priority) ?? '',
-    assigneeIds: o.assigneeIds,
-    dateStart: o.dateStart,
-    dateEnd: o.dateEnd,
-    status: o.status as IterationStatus,
+    // productOwnerIds 是新增字段，旧数据中可能缺失，兼容回退为空数组
+    productOwnerIds: isStringArray(o.productOwnerIds) ? o.productOwnerIds : [],
+    // assigneeIds 缺失或格式异常时兼容为空数组，不再让整条记录解析失败
+    assigneeIds: isStringArray(o.assigneeIds) ? o.assigneeIds : [],
+    dateStart,
+    dateEnd,
+    status,
   };
 }
 
 function parseNewIterationRow(o: Record<string, unknown>): IterationRecordRow | null {
+  // 只有 id、scope 是真正不可缺少的核心字段，其余均兼容处理
   if (typeof o.id !== 'string' || !o.id) return null;
   if (typeof o.scope !== 'string' || !SCOPES.has(o.scope as IterationNavScope)) return null;
-  if (typeof o.parentRequirement !== 'string') return null;
   const priority = parseIterationPriority(o.priority) ?? 'B';
   const version = typeof o.version === 'string' ? o.version : '';
-  if (!Array.isArray(o.subRequirements)) return null;
-  const subs = o.subRequirements.map(parseSubRequirement).filter(Boolean) as IterationSubRequirementRow[];
-  if (subs.length !== o.subRequirements.length) return null;
-  if (!isStringArray(o.parentAssigneeIds)) return null;
-  if (typeof o.parentDateStart !== 'string' || typeof o.parentDateEnd !== 'string') return null;
-  if (typeof o.detailRulesHtml !== 'string') return null;
-  if (typeof o.status !== 'string' || !STATUSES.has(o.status as IterationStatus)) return null;
-  if (typeof o.releaseTime !== 'string') return null;
-  if (typeof o.notesHtml !== 'string') return null;
-  if (typeof o.createdAt !== 'string' || !o.createdAt) return null;
+  const rawSubs = Array.isArray(o.subRequirements) ? o.subRequirements : [];
+  const subs = rawSubs.map(parseSubRequirement).filter(Boolean) as IterationSubRequirementRow[];
+  const status: IterationStatus = (typeof o.status === 'string' && STATUSES.has(o.status as IterationStatus))
+    ? (o.status as IterationStatus)
+    : 'pending';
   return {
     id: o.id,
     scope: o.scope as IterationNavScope,
-    parentRequirement: o.parentRequirement,
+    parentRequirement: typeof o.parentRequirement === 'string' ? o.parentRequirement : '',
     priority,
     version,
     subRequirements: subs,
-    parentAssigneeIds: o.parentAssigneeIds,
-    parentDateStart: o.parentDateStart,
-    parentDateEnd: o.parentDateEnd,
-    detailRulesHtml: o.detailRulesHtml,
-    status: o.status as IterationStatus,
-    releaseTime: o.releaseTime,
-    notesHtml: o.notesHtml,
-    createdAt: o.createdAt,
+    parentProductOwnerIds: isStringArray(o.parentProductOwnerIds) ? o.parentProductOwnerIds : [],
+    parentAssigneeIds: isStringArray(o.parentAssigneeIds) ? o.parentAssigneeIds : [],
+    parentDateStart: typeof o.parentDateStart === 'string' ? o.parentDateStart : '',
+    parentDateEnd: typeof o.parentDateEnd === 'string' ? o.parentDateEnd : '',
+    detailRulesHtml: typeof o.detailRulesHtml === 'string' ? o.detailRulesHtml : '<p><br></p>',
+    status,
+    releaseTime: typeof o.releaseTime === 'string' ? o.releaseTime : '',
+    notesHtml: typeof o.notesHtml === 'string' ? o.notesHtml : '<p><br></p>',
+    createdAt: typeof o.createdAt === 'string' && o.createdAt ? o.createdAt : new Date().toISOString(),
   };
 }
 
@@ -139,15 +144,19 @@ function parseLegacyIterationRow(o: unknown): IterationRecordRow | null {
   const r = o as Record<string, unknown>;
   if (typeof r.id !== 'string' || !r.id) return null;
   if (typeof r.scope !== 'string' || !SCOPES.has(r.scope as IterationNavScope)) return null;
-  if (typeof r.title !== 'string') return null;
-  if (typeof r.sections !== 'string') return null;
-  if (typeof r.content !== 'string') return null;
-  if (typeof r.developers !== 'string') return null;
-  if (typeof r.status !== 'string' || !STATUSES.has(r.status as IterationStatus)) return null;
-  if (typeof r.releaseTime !== 'string') return null;
-  if (typeof r.notesHtml !== 'string') return null;
-  if (typeof r.createdAt !== 'string') return null;
-  return migrateLegacyIterationRow(r as Parameters<typeof migrateLegacyIterationRow>[0]);
+  // 兼容缺失字段，回退空字符串，不整条丢弃
+  const normalized = {
+    ...r,
+    title: typeof r.title === 'string' ? r.title : '',
+    sections: typeof r.sections === 'string' ? r.sections : '',
+    content: typeof r.content === 'string' ? r.content : '',
+    developers: typeof r.developers === 'string' ? r.developers : '',
+    status: (typeof r.status === 'string' && STATUSES.has(r.status as IterationStatus)) ? r.status : 'pending',
+    releaseTime: typeof r.releaseTime === 'string' ? r.releaseTime : '',
+    notesHtml: typeof r.notesHtml === 'string' ? r.notesHtml : '<p><br></p>',
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
+  };
+  return migrateLegacyIterationRow(normalized as Parameters<typeof migrateLegacyIterationRow>[0]);
 }
 
 function normalizeIterationEntry(x: unknown): IterationRecordRow | null {
@@ -159,19 +168,45 @@ function normalizeIterationEntry(x: unknown): IterationRecordRow | null {
 
 /**
  * 未写入过 key 时用种子数据；已写入（含空数组）则按本机数据为准。
- * 若 JSON 结构损坏（条目无法通过校验）则回退种子，避免白屏。
+ * 单条解析失败时跳过该条并打印警告，保留其余数据，不再整批回退种子。
  * 支持旧版「标题 / 涉及板块」结构自动迁移为新父需求 + 详细规则结构。
+ *
+ * 种子合并策略：种子文件中存在、但 localStorage 里没有的 id，会被追加到末尾。
+ * 这样「保存到仓库」写入新条目后，刷新页面即可自动同步，无需手动清空 localStorage。
  */
 export function loadIterationRecordsFromStorage(): IterationRecordRow[] {
   const parsed = readLocalJson<unknown>(STORAGE_KEYS.iterationRecords);
   if (parsed === null) return [...iterationRecordSeedData];
   if (!Array.isArray(parsed)) return [...iterationRecordSeedData];
   const rows: IterationRecordRow[] = [];
+  let skipped = 0;
   for (const x of parsed) {
     const row = normalizeIterationEntry(x);
-    if (!row) return [...iterationRecordSeedData];
+    if (!row) { skipped++; continue; }
     rows.push(row);
   }
+  if (skipped > 0) {
+    console.warn(`[localWorkspace] 迭代记录：${skipped} 条数据因字段不兼容已跳过（其余 ${rows.length} 条已保留）`);
+  }
+  // 全部条目都解析失败时才回退种子，保护用户数据
+  if (rows.length === 0 && parsed.length > 0) return [...iterationRecordSeedData];
+
+  // 将种子文件中有、但 localStorage 中没有的条目追加进来（按 id 去重）
+  // 解决「保存到仓库后刷新数据消失」的问题：新写入 seed.json 的条目会被自动补入
+  const existingIds = new Set(rows.map((r) => r.id));
+  let merged = false;
+  for (const seedRow of iterationRecordSeedData) {
+    if (!existingIds.has(seedRow.id)) {
+      rows.push(seedRow);
+      merged = true;
+    }
+  }
+
+  // 有新条目补入时立即写回 localStorage，确保下次刷新也能读到
+  if (merged) {
+    writeLocalJson(STORAGE_KEYS.iterationRecords, rows);
+  }
+
   return rows;
 }
 
@@ -194,7 +229,16 @@ export function loadProductStaffFromStorage(): ProductStaffRow[] {
   if (parsed === null) return [...productStaffSeedData];
   if (!Array.isArray(parsed)) return [...productStaffSeedData];
   const rows = parsed.filter(isProductStaffRow);
-  if (rows.length !== parsed.length) return [...productStaffSeedData];
+  const skipped = parsed.length - rows.length;
+  if (skipped > 0) {
+    console.warn(`[localWorkspace] 产研人员：${skipped} 条数据因字段不兼容已跳过`);
+  }
+  if (rows.length === 0 && parsed.length > 0) return [...productStaffSeedData];
+  // 种子中有但 localStorage 没有的条目，自动追加
+  const existingIds = new Set(rows.map((r) => r.id));
+  for (const seedRow of productStaffSeedData) {
+    if (!existingIds.has(seedRow.id)) rows.push(seedRow);
+  }
   return rows;
 }
 
@@ -213,7 +257,13 @@ export function loadSectGuildFromStorage(): SectGuildRow[] {
   const parsed = readLocalJson<unknown>(STORAGE_KEYS.sectGuild);
   if (parsed === null) return [...sectGuildSeedData];
   if (!Array.isArray(parsed)) return [...sectGuildSeedData];
-  return parsed as SectGuildRow[];
+  const rows = parsed as SectGuildRow[];
+  // 种子中有但 localStorage 没有的条目，自动追加
+  const existingIds = new Set(rows.map((r) => r.id));
+  for (const seedRow of sectGuildSeedData) {
+    if (!existingIds.has(seedRow.id)) rows.push(seedRow);
+  }
+  return rows;
 }
 
 export function saveSectGuildToStorage(rows: SectGuildRow[]): void {
@@ -224,19 +274,19 @@ export function saveSectGuildToStorage(rows: SectGuildRow[]): void {
 
 /**
  * 加载奖励管理数据。
- * 若 localStorage 中的 seed 版本号与当前 REWARD_SEED_VERSION 不一致，
- * 说明 seed 文件已更新，自动用最新 seed 覆盖本地缓存并更新版本号。
+ * 用户已有本机数据时始终优先保留，版本号变更只更新版本记录，不覆盖用户数据。
+ * 仅在 localStorage 中完全没有数据（首次访问）时才写入种子数据。
  */
 export function loadRewardManagementFromStorage(): RewardManagementRow[] {
-  const storedVersion = readLocalJson<number>(STORAGE_KEYS.rewardManagementSeedVersion);
-  const seedOutdated = storedVersion !== REWARD_SEED_VERSION;
-
   const parsed = readLocalJson<unknown>(STORAGE_KEYS.rewardManagement);
-  if (parsed === null || !Array.isArray(parsed) || seedOutdated) {
+  // 首次访问：写入种子数据并记录版本
+  if (parsed === null || !Array.isArray(parsed)) {
     writeLocalJson(STORAGE_KEYS.rewardManagementSeedVersion, REWARD_SEED_VERSION);
     writeLocalJson(STORAGE_KEYS.rewardManagement, rewardManagementSeedData);
     return [...rewardManagementSeedData];
   }
+  // 有用户数据：始终保留，仅同步版本号（不覆盖数据）
+  writeLocalJson(STORAGE_KEYS.rewardManagementSeedVersion, REWARD_SEED_VERSION);
   return parsed as RewardManagementRow[];
 }
 
@@ -261,10 +311,20 @@ export function loadProjectManagementFromStorage(): ProjectManagementRow[] {
   if (parsed === null) return [...projectManagementSeedData];
   if (!Array.isArray(parsed)) return [...projectManagementSeedData];
   const rows: ProjectManagementRow[] = [];
+  let skipped = 0;
   for (const x of parsed) {
     const row = normalizeProjectRow(x);
-    if (!row) return [...projectManagementSeedData];
+    if (!row) { skipped++; continue; }
     rows.push(row);
+  }
+  if (skipped > 0) {
+    console.warn(`[localWorkspace] 项目管理：${skipped} 条数据因字段不兼容已跳过`);
+  }
+  if (rows.length === 0 && parsed.length > 0) return [...projectManagementSeedData];
+  // 种子中有但 localStorage 没有的条目，自动追加
+  const existingIds = new Set(rows.map((r) => r.id));
+  for (const seedRow of projectManagementSeedData) {
+    if (!existingIds.has(seedRow.id)) rows.push(seedRow);
   }
   return rows;
 }
@@ -292,7 +352,13 @@ export function loadYouboomTeamFromStorage(): YouboomTeamRow[] {
   const parsed = readLocalJson<unknown>(STORAGE_KEYS.youboomTeam);
   if (parsed === null) return [...youboomTeamSeedData];
   if (!Array.isArray(parsed)) return [...youboomTeamSeedData];
-  return parsed as YouboomTeamRow[];
+  const rows = parsed as YouboomTeamRow[];
+  // 种子中有但 localStorage 没有的条目，自动追加
+  const existingIds = new Set(rows.map((r) => r.id));
+  for (const seedRow of youboomTeamSeedData) {
+    if (!existingIds.has(seedRow.id)) rows.push(seedRow);
+  }
+  return rows;
 }
 
 export function saveYouboomTeamToStorage(rows: YouboomTeamRow[]): void {

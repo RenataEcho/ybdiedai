@@ -3,6 +3,7 @@
 ## 目录
 
 - [本机数据持久化到仓库](#本机数据持久化到仓库)
+- [修改字段结构时的数据安全规范](#修改字段结构时的数据安全规范)
 
 ---
 
@@ -122,6 +123,100 @@ const [myNewRows, setMyNewRows] = useState(() => loadMyNewFromStorage());
 useEffect(() => {
   saveMyNewToStorage(myNewRows);
 }, [myNewRows]);
+```
+
+---
+
+## 修改字段结构时的数据安全规范
+
+### 背景
+
+用户在 Vite 开发模式下点击「保存到仓库」后，数据写入 `src/mock/*.json`。但若后续修改了 TypeScript 数据结构，`localWorkspacePersistence.ts` 里的解析/校验逻辑可能因旧格式数据无法通过校验而回退到种子数据，导致用户数据丢失。
+
+### 规则
+
+#### 新增字段：必须向前兼容
+
+在 `localWorkspacePersistence.ts` 的解析函数中，**新字段必须提供默认值**，不能直接硬性校验：
+
+```typescript
+// ✅ GOOD — 新字段缺失时降级为默认值，旧数据仍可解析
+return {
+  id: o.id,
+  title: o.title,
+  // newField 是后加字段，旧数据中可能缺失，默认为空字符串
+  newField: typeof o.newField === 'string' ? o.newField : '',
+};
+
+// ❌ BAD — 新字段强制校验，旧数据会解析失败触发整批回退
+if (typeof o.newField !== 'string') return null;
+```
+
+#### 删除或重命名字段：需在解析函数中保留兼容读取
+
+```typescript
+// ✅ GOOD — 同时读取新旧字段名，优先新字段
+title: typeof o.newTitle === 'string' ? o.newTitle
+     : typeof o.oldTitle === 'string' ? o.oldTitle   // 旧字段兼容
+     : '',
+```
+
+#### 修改字段类型（如枚举新增值）：解析时提供默认值
+
+```typescript
+// ✅ GOOD — 未知枚举值回退到安全默认值而非返回 null
+status: VALID_STATUSES.has(o.status as string) ? o.status as MyStatus : 'pending',
+
+// ❌ BAD — 未知值直接返回 null，触发整行跳过
+if (!VALID_STATUSES.has(o.status as string)) return null;
+```
+
+#### 解析失败的容错策略
+
+`load*FromStorage` 函数应**跳过无效条目而非整批回退**：
+
+```typescript
+// ✅ GOOD
+const rows: MyRow[] = [];
+let skipped = 0;
+for (const x of parsed) {
+  const row = normalizeMyRow(x);
+  if (!row) { skipped++; continue; }
+  rows.push(row);
+}
+if (skipped > 0) console.warn(`[localWorkspace] 跳过 ${skipped} 条不兼容数据`);
+// 仅全部失败时回退种子
+if (rows.length === 0 && parsed.length > 0) return [...mySeedData];
+return rows;
+
+// ❌ BAD — 一条失败就整批回退
+for (const x of parsed) {
+  const row = normalizeMyRow(x);
+  if (!row) return [...mySeedData];  // 一条失败，用户所有数据丢失！
+  rows.push(row);
+}
+```
+
+#### 不要用版本号强制覆盖用户数据
+
+`REWARD_SEED_VERSION` 等版本号机制**不应在用户已有数据时强制覆盖**：
+
+```typescript
+// ✅ GOOD — 有用户数据时保留，仅同步版本号
+if (parsed === null || !Array.isArray(parsed)) {
+  // 首次访问才写入种子
+  writeLocalJson(STORAGE_KEYS.seedVersion, CURRENT_VERSION);
+  writeLocalJson(STORAGE_KEYS.data, seedData);
+  return [...seedData];
+}
+writeLocalJson(STORAGE_KEYS.seedVersion, CURRENT_VERSION); // 只更新版本号
+return parsed as MyRow[];
+
+// ❌ BAD — 版本号变了就覆盖用户数据
+if (storedVersion !== CURRENT_VERSION) {
+  writeLocalJson(STORAGE_KEYS.data, seedData);  // 用户数据被清空！
+  return [...seedData];
+}
 ```
 
 ---

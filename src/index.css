@@ -145,17 +145,41 @@
 /* 分割线 */
 .tiptap hr { border: none; border-top: 1px solid #e5e7eb; margin: 1em 0; }
 
-/* 图片 */
-.tiptap img, .tiptap .rte-img {
+/* 图片（内联可缩放图片，由 ResizableImageExtension 渲染） */
+.tiptap .rte-img-inline {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
-  display: block;
-  margin: 8px 0;
+  display: inline-block;
+  vertical-align: bottom;
   cursor: default;
 }
-.tiptap img.ProseMirror-selectednode,
-.tiptap .rte-img.ProseMirror-selectednode {
+
+/* 图片容器 wrapper（NodeViewWrapper） */
+.tiptap .rte-img-wrapper {
+  display: inline-block !important;
+  position: relative;
+  vertical-align: bottom;
+  /* 允许并排：不强制换行 */
+  line-height: 0;
+}
+
+/* 拖拽移动时的视觉反馈 */
+.tiptap .rte-img-wrapper.ProseMirror-selectednode .rte-img-inline {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* 兼容旧数据里的 .rte-img */
+.tiptap img.rte-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: inline-block;
+  vertical-align: bottom;
+  cursor: default;
+}
+.tiptap img.rte-img.ProseMirror-selectednode {
   outline: 2px solid #6366f1;
   outline-offset: 2px;
 }

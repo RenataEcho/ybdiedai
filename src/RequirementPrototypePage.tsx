@@ -15,11 +15,13 @@ import {
   Layers, ExternalLink, Sparkles, Monitor, ChevronRight, User,
   FolderTree, Zap, X, Check, Edit3, FileEdit,
   Bot, Cpu, Globe, Rocket, TrendingUp, Users, GraduationCap,
+  Smartphone, LayoutDashboard,
 } from 'lucide-react';
 import {
   type SavedPrototype,
   type PrototypeProductLine,
   type RequirementType,
+  type DesignMode,
   loadPrototypes,
   savePrototypes,
   createPrototype,
@@ -34,6 +36,8 @@ type QueueItem = {
   name: string;
   requirement: string;
   requirementType?: RequirementType;
+  /** 设计模式：admin = 管理后台，mobile = 移动端 */
+  designMode?: DesignMode;
   /** 已有功能需求：选中的菜单 key 列表 */
   targetMenuKeys?: string[];
   /** 已有功能需求：对应的实际源文件路径列表（供 Cursor AI 直接修改） */
@@ -56,6 +60,7 @@ type ChatMsg = {
   productLine?: PrototypeProductLine;
   name?: string;
   requirementType?: RequirementType;
+  designMode?: DesignMode;
   targetMenuKeys?: string[];
   sourceFiles?: string[];
 };
@@ -520,6 +525,7 @@ function ExistingMenuMultiSelect({
 export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateToModule }: Props) {
   const [view, setView] = useState<View>('landing');
   const [productLine, setProductLine] = useState<PrototypeProductLine>('youbao');
+  const [designMode, setDesignMode] = useState<DesignMode>('admin');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [library, setLibrary] = useState<SavedPrototype[]>(() => loadPrototypes());
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
@@ -624,11 +630,12 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
       addToMenuMsg.queueId,
       menuPath,
       addToMenuMsg.requirementType,
+      addToMenuMsg.designMode ?? designMode,
     );
     handleSaved(proto);
     setAddToMenuMsg(null);
     setActiveTab('library');
-  }, [addToMenuMsg, productLine, handleSaved]);
+  }, [addToMenuMsg, productLine, designMode, handleSaved]);
 
   const handleDeleteFromHistory = useCallback((queueId: string) => {
     void deleteQueueItem(queueId);
@@ -658,9 +665,10 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
   if (view === 'landing') {
     return (
       <LandingPage
-        onSelect={(pl, type) => {
+        onSelect={(pl, type, mode) => {
           setProductLine(pl);
           setRequirementType(type);
+          setDesignMode(mode);
           setView('designing');
           setActiveTab('chat');
           setChatStep('chatting');
@@ -700,6 +708,18 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
           </span>
           {chatStep === 'chatting' && (
             <>
+              <div className="w-px h-4 bg-line" />
+              <span className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
+                designMode === 'mobile'
+                  ? 'bg-sky-500/10 text-sky-500'
+                  : 'bg-[#6366f1]/10 text-[#6366f1]'
+              }`}>
+                {designMode === 'mobile'
+                  ? <Smartphone className="w-3 h-3" />
+                  : <LayoutDashboard className="w-3 h-3" />
+                }
+                {designMode === 'mobile' ? '移动端' : '管理后台'}
+              </span>
               <div className="w-px h-4 bg-line" />
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                 requirementType === 'new-menu'
@@ -783,6 +803,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
               messages={messages}
               library={library}
               color={color}
+              designMode={designMode}
               onSave={handleOpenAddToMenu}
               onDelete={handleDeleteFromHistory}
             />
@@ -827,10 +848,12 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
 function LandingPage({
   onSelect,
 }: {
-  onSelect: (pl: PrototypeProductLine, type: RequirementType) => void;
+  onSelect: (pl: PrototypeProductLine, type: RequirementType, mode: DesignMode) => void;
 }) {
   const [hoveredPl, setHoveredPl] = useState<PrototypeProductLine | null>(null);
   const [selectedPl, setSelectedPl] = useState<PrototypeProductLine | null>(null);
+  // 选中产品线后，先选设计模式，再展开需求类型
+  const [selectedMode, setSelectedMode] = useState<DesignMode | null>(null);
   const [typedIndex, setTypedIndex] = useState(0);
 
   const TYPED_TEXTS = ['快速原型设计', '智能需求理解', '一键生成页面', 'AI 辅助迭代'];
@@ -959,7 +982,15 @@ function LandingPage({
                     : '0 1px 4px rgba(0,0,0,0.06)',
                   transition: 'all 0.25s ease',
                 }}
-                onClick={() => setSelectedPl(isSelected ? null : pl)}
+                onClick={() => {
+                  if (isSelected) {
+                    setSelectedPl(null);
+                    setSelectedMode(null);
+                  } else {
+                    setSelectedPl(pl);
+                    setSelectedMode(null);
+                  }
+                }}
               >
                 {/* 顶部渐变色条 */}
                 <div className="h-1 w-full" style={{ background: cfg.gradient }} />
@@ -1009,7 +1040,7 @@ function LandingPage({
                     ))}
                   </div>
 
-                  {/* 展开操作区 */}
+                  {/* 展开操作区：两步选择 */}
                   <AnimatePresence initial={false}>
                     {isSelected && (
                       <motion.div
@@ -1019,34 +1050,100 @@ function LandingPage({
                         transition={{ duration: 0.22, ease: 'easeInOut' }}
                         className="overflow-hidden"
                       >
-                        <div className="pt-3 mt-1 grid grid-cols-2 gap-2 border-t border-line">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onSelect(pl, 'new-menu'); }}
-                            className="group flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-[#6366f1]/6 hover:bg-[#6366f1]/12 border border-[#6366f1]/20 hover:border-[#6366f1]/40"
-                          >
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#6366f1]/12">
-                              <Plus className="w-3.5 h-3.5 text-accent" />
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-semibold text-ink">新功能菜单</p>
-                              <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">AI 从零生成原型</p>
-                            </div>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onSelect(pl, 'existing-feature'); }}
-                            className="group flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-emerald-500/6 hover:bg-emerald-500/12 border border-emerald-500/20 hover:border-emerald-500/40"
-                          >
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/12">
-                              <FileEdit className="w-3.5 h-3.5 text-emerald-500" />
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-semibold text-ink">已有功能调整</p>
-                              <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">在已有页面上迭代</p>
-                            </div>
-                          </button>
+                        <div className="pt-3 mt-1 border-t border-line" onClick={(e) => e.stopPropagation()}>
+                          {/* Step 1: 选设计模式 */}
+                          {!selectedMode ? (
+                            <>
+                              <p className="text-[10px] font-semibold text-gray-400 dark:text-white/30 mb-2 uppercase tracking-wide">
+                                选择设计类型
+                              </p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedMode('admin')}
+                                  className="flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-[#6366f1]/6 hover:bg-[#6366f1]/12 border border-[#6366f1]/20 hover:border-[#6366f1]/40"
+                                >
+                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#6366f1]/12">
+                                    <LayoutDashboard className="w-3.5 h-3.5 text-accent" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-semibold text-ink">管理后台</p>
+                                    <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">PC 端管理系统页面</p>
+                                  </div>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedMode('mobile')}
+                                  className="flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-sky-500/6 hover:bg-sky-500/12 border border-sky-500/20 hover:border-sky-500/40"
+                                >
+                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-sky-500/12">
+                                    <Smartphone className="w-3.5 h-3.5 text-sky-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-semibold text-ink">移动端（H5）</p>
+                                    <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">iPhone 16 Pro 尺寸预览</p>
+                                  </div>
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            /* Step 2: 选需求类型 */
+                            <>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-[10px] font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wide">
+                                  选择需求类型
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedMode(null)}
+                                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 dark:text-white/30 dark:hover:text-white/60 cursor-pointer"
+                                >
+                                  <ArrowLeft className="w-3 h-3" />
+                                  返回
+                                </button>
+                              </div>
+                              {/* 当前设计模式标签 */}
+                              <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium mb-2 ${
+                                selectedMode === 'mobile'
+                                  ? 'bg-sky-500/10 text-sky-500'
+                                  : 'bg-[#6366f1]/10 text-[#6366f1]'
+                              }`}>
+                                {selectedMode === 'mobile'
+                                  ? <Smartphone className="w-2.5 h-2.5" />
+                                  : <LayoutDashboard className="w-2.5 h-2.5" />
+                                }
+                                {selectedMode === 'mobile' ? '移动端（H5）' : '管理后台'}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => onSelect(pl, 'new-menu', selectedMode)}
+                                  className="flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-[#6366f1]/6 hover:bg-[#6366f1]/12 border border-[#6366f1]/20 hover:border-[#6366f1]/40"
+                                >
+                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#6366f1]/12">
+                                    <Plus className="w-3.5 h-3.5 text-accent" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-semibold text-ink">新功能菜单</p>
+                                    <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">AI 从零生成原型</p>
+                                  </div>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onSelect(pl, 'existing-feature', selectedMode)}
+                                  className="flex flex-col items-start gap-2 p-3 rounded-xl cursor-pointer text-left transition-all bg-emerald-500/6 hover:bg-emerald-500/12 border border-emerald-500/20 hover:border-emerald-500/40"
+                                >
+                                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/12">
+                                    <FileEdit className="w-3.5 h-3.5 text-emerald-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-semibold text-ink">已有功能调整</p>
+                                    <p className="text-[10px] text-gray-400 dark:text-white/35 leading-relaxed mt-0.5">在已有页面上迭代</p>
+                                  </div>
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -1135,16 +1232,22 @@ function getDateFromQueueId(id: string): string {
 
 const PREVIEW_DESIGN_WIDTH = 1280;
 
+// iPhone 16 Pro 逻辑像素尺寸（pt）
+const IPHONE16PRO_W = 393;
+const IPHONE16PRO_H = 852;
+
 function HistoryPreviewPanel({
   messages,
   library,
   color,
+  designMode,
   onSave,
   onDelete,
 }: {
   messages: ChatMsg[];
   library: SavedPrototype[];
   color: string;
+  designMode: DesignMode;
   onSave: (msg: ChatMsg) => void;
   onDelete: (queueId: string) => void;
 }) {
@@ -1165,11 +1268,19 @@ function HistoryPreviewPanel({
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
-      setPreviewScale(Math.min(1, w / PREVIEW_DESIGN_WIDTH));
+      if (designMode === 'mobile') {
+        // 移动端：按高度适配，留出手机壳边距
+        const h = entry.contentRect.height;
+        const shellH = IPHONE16PRO_H + 80;
+        const shellW = IPHONE16PRO_W + 40;
+        setPreviewScale(Math.min(1, w / shellW, h / shellH));
+      } else {
+        setPreviewScale(Math.min(1, w / PREVIEW_DESIGN_WIDTH));
+      }
     });
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [designMode]);
 
   // Build requirement lookup: queueId → requirement text
   const requirementMap = useMemo(() => {
@@ -1348,21 +1459,88 @@ function HistoryPreviewPanel({
             <div className="flex-1 min-h-0 flex">
               <div
                 ref={iframeWrapRef}
-                className={`${showCode ? 'flex-1' : 'w-full'} relative overflow-hidden`}
+                className={`${showCode ? 'flex-1' : 'w-full'} relative overflow-hidden flex items-center justify-center`}
+                style={{ background: designMode === 'mobile' ? 'var(--color-surface, #f8fafc)' : undefined }}
               >
-                <iframe
-                  key={activeMsg.id}
-                  title={activeMsg.name ?? '原型预览'}
-                  srcDoc={activeMsg.html}
-                  className="absolute top-0 left-0 border-0"
-                  style={{
-                    width: previewScale < 1 ? `${100 / previewScale}%` : '100%',
-                    height: previewScale < 1 ? `${100 / previewScale}%` : '100%',
-                    transform: `scale(${previewScale})`,
-                    transformOrigin: 'top left',
-                  }}
-                  sandbox="allow-scripts allow-same-origin"
-                />
+                {designMode === 'mobile' ? (
+                  /* ── iPhone 16 Pro 外框 ── */
+                  <div
+                    style={{
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'center center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {/* 手机壳外框 */}
+                    <div style={{
+                      width: IPHONE16PRO_W + 28,
+                      height: IPHONE16PRO_H + 60,
+                      borderRadius: 52,
+                      background: 'linear-gradient(145deg,#2a2a2e 0%,#1a1a1d 40%,#2a2a2e 100%)',
+                      boxShadow: '0 0 0 1.5px rgba(255,255,255,0.12), 0 32px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
+                      padding: 10,
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}>
+                      {/* 顶部灵动岛 */}
+                      <div style={{
+                        width: 120, height: 34, borderRadius: 20,
+                        background: '#0a0a0a',
+                        position: 'absolute',
+                        top: 18, left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 10,
+                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
+                      }} />
+                      {/* 屏幕区域 */}
+                      <div style={{
+                        width: IPHONE16PRO_W,
+                        height: IPHONE16PRO_H,
+                        borderRadius: 44,
+                        overflow: 'hidden',
+                        background: '#000',
+                        position: 'relative',
+                        flexShrink: 0,
+                      }}>
+                        <iframe
+                          key={activeMsg.id}
+                          title={activeMsg.name ?? '原型预览'}
+                          srcDoc={activeMsg.html}
+                          className="border-0"
+                          style={{
+                            width: IPHONE16PRO_W,
+                            height: IPHONE16PRO_H,
+                            display: 'block',
+                          }}
+                          sandbox="allow-scripts allow-same-origin"
+                        />
+                      </div>
+                      {/* 底部 Home 指示条 */}
+                      <div style={{
+                        width: 130, height: 5, borderRadius: 3,
+                        background: 'rgba(255,255,255,0.3)',
+                        position: 'absolute',
+                        bottom: 14,
+                      }} />
+                    </div>
+                  </div>
+                ) : (
+                  /* ── 管理后台：铺满预览 ── */
+                  <iframe
+                    key={activeMsg.id}
+                    title={activeMsg.name ?? '原型预览'}
+                    srcDoc={activeMsg.html}
+                    className="absolute top-0 left-0 border-0"
+                    style={{
+                      width: previewScale < 1 ? `${100 / previewScale}%` : '100%',
+                      height: previewScale < 1 ? `${100 / previewScale}%` : '100%',
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'top left',
+                    }}
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                )}
               </div>
               {showCode && (
                 <div className="w-96 shrink-0 bg-gray-950 overflow-auto border-l border-line">

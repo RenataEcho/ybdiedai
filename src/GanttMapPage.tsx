@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect, useCallback, type CSSProperties } from 'react';
-import { motion } from 'motion/react';
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { IterationPriority, IterationRecordRow } from './iterationRecordModel';
 import { ITERATION_PRIORITY_LABEL } from './iterationRecordModel';
 import type { ProductLine } from './pageRuleCatalog';
@@ -50,6 +50,7 @@ export type GanttBarRow = {
   subLabel: string;
   start: Date;
   end: Date;
+  /** 研发测试人员 id 列表（日历条显示） */
   assigneeIds: string[];
   /** 本条 bar 实际使用的优先级：子需求有则用子，否则继承父需求 */
   barPriority: IterationPriority;
@@ -61,6 +62,8 @@ export type GanttGroup = {
   recordId: string;
   parentLabel: string;
   priority: IterationPriority;
+  /** 父需求级产品负责人 id 列表（收起态展示用） */
+  parentProductOwnerIds: string[];
   bars: GanttBarRow[];
 };
 
@@ -176,7 +179,8 @@ function buildGanttGroups(rows: IterationRecordRow[], scope: ProductLine): Gantt
       for (const sub of row.subRequirements) {
         const range = normalizeRange(sub.dateStart, sub.dateEnd);
         if (!range) continue;
-        const ids = sub.assigneeIds.filter(Boolean);
+        // 研发测试人员：子需求优先，回退父需求
+        const devIds = sub.assigneeIds.filter(Boolean);
         bars.push({
           key: `${row.id}:${sub.id}`,
           recordId: row.id,
@@ -184,7 +188,7 @@ function buildGanttGroups(rows: IterationRecordRow[], scope: ProductLine): Gantt
           subLabel: sub.title.trim() || '（未命名子需求）',
           start: range.start,
           end: range.end,
-          assigneeIds: ids.length ? ids : row.parentAssigneeIds.filter(Boolean),
+          assigneeIds: devIds.length ? devIds : row.parentAssigneeIds.filter(Boolean),
           barPriority: sub.priority || row.priority,
         });
       }
@@ -220,7 +224,13 @@ function buildGanttGroups(rows: IterationRecordRow[], scope: ProductLine): Gantt
     }
 
     if (bars.length === 0) continue;
-    groups.push({ recordId: row.id, parentLabel: base, priority: row.priority, bars });
+    groups.push({
+      recordId: row.id,
+      parentLabel: base,
+      priority: row.priority,
+      parentProductOwnerIds: (row.parentProductOwnerIds ?? []).filter(Boolean),
+      bars,
+    });
   }
   groups.sort((a, b) => {
     const amin = Math.min(...a.bars.map((x) => x.start.getTime()));
@@ -403,6 +413,7 @@ function TimelineBar({
   );
 }
 
+
 export function GanttMapPage({
   iterationRows,
   staffNameById,
@@ -423,6 +434,118 @@ export function GanttMapPage({
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dragPreview, setDragPreview] = useState<{ key: string; start: Date; end: Date } | null>(null);
+
+  /** all-subs 模式当前激活的子需求 tab 下标 */
+  const [allSubsActiveIdx, setAllSubsActiveIdx] = useState(0);
+
+  /** 抽屉数据：点击父需求或子需求列时弹出 */
+  type DetailModal =
+    | { kind: 'parent'; parentTitle: string; detailHtml: string }
+    | { kind: 'sub'; parentTitle: string; subTitle: string; detailHtml: string }
+    /** 折叠态点子需求 → 显示所有子需求的多 tab 抽屉，defaultSubIdx 为默认激活 tab */
+    | { kind: 'all-subs'; parentTitle: string; subs: { id: string; title: string; descriptionHtml: string }[]; defaultSubIdx: number };
+  const [detailModal, setDetailModal] = useState<DetailModal | null>(null);
+  /** 灯箱：放大查看图片 */
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  /** 富文本内容区 ref，用于绑定图片点击事件 */
+  const richContentRef = useRef<HTMLDivElement>(null);
+  /** 抽屉宽度（px），默认 420，可拖拽调整 */
+  const DRAWER_MIN = 280;
+  const DRAWER_MAX = 860;
+  const DRAWER_DEFAULT = 420;
+  const [drawerWidth, setDrawerWidth] = useState(DRAWER_DEFAULT);
+  const drawerResizing = useRef(false);
+  const drawerResizeStartX = useRef(0);
+  const drawerResizeStartW = useRef(0);
+
+  const onDrawerResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    drawerResizing.current = true;
+    drawerResizeStartX.current = e.clientX;
+    drawerResizeStartW.current = drawerWidth;
+  }, [drawerWidth]);
+
+  const onDrawerResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drawerResizing.current) return;
+    // 抽屉从右侧滑出，向左拖动手柄 = 加宽
+    const delta = drawerResizeStartX.current - e.clientX;
+    const newW = Math.max(DRAWER_MIN, Math.min(DRAWER_MAX, drawerResizeStartW.current + delta));
+    setDrawerWidth(Math.round(newW));
+  }, []);
+
+  const onDrawerResizeEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    drawerResizing.current = false;
+    (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+  }, []);
+
+  /** 以 recordId 快速查找行数据 */
+  const rowById = useMemo(() => {
+    const map = new Map<string, IterationRecordRow>();
+    for (const row of iterationRows) map.set(row.id, row);
+    return map;
+  }, [iterationRows]);
+
+  /** 弹窗内容渲染完成后，给所有图片绑定点击放大 */
+  useEffect(() => {
+    if (!detailModal) return;
+    // 等 DOM 渲染完毕再绑定
+    const timer = setTimeout(() => {
+      const container = richContentRef.current;
+      if (!container) return;
+      const imgs = container.querySelectorAll<HTMLImageElement>('img');
+      imgs.forEach((img) => {
+        img.style.cursor = 'zoom-in';
+        img.title = '点击放大查看';
+      });
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'IMG') {
+          const src = (target as HTMLImageElement).src;
+          if (src) setLightboxSrc(src);
+        }
+      };
+      container.addEventListener('click', handleClick);
+      return () => container.removeEventListener('click', handleClick);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [detailModal, allSubsActiveIdx]);
+
+  const openDetailModal = useCallback((recordId: string, subId?: string, isCollapsed?: boolean) => {
+    const row = rowById.get(recordId);
+    if (!row) return;
+    if (subId) {
+      const subIdx = row.subRequirements.findIndex((s) => s.id === subId);
+      if (isCollapsed && row.subRequirements.length > 0) {
+        const defaultIdx = Math.max(0, subIdx);
+        setAllSubsActiveIdx(defaultIdx);
+        setDetailModal({
+          kind: 'all-subs',
+          parentTitle: row.parentRequirement,
+          subs: row.subRequirements.map((s) => ({
+            id: s.id,
+            title: s.title.trim() || '（未命名子需求）',
+            descriptionHtml: s.descriptionHtml || '<p><br></p>',
+          })),
+          defaultSubIdx: defaultIdx,
+        });
+      } else {
+        const sub = row.subRequirements[Math.max(0, subIdx)];
+        setDetailModal({
+          kind: 'sub',
+          parentTitle: row.parentRequirement,
+          subTitle: sub?.title.trim() || '（未命名子需求）',
+          detailHtml: sub?.descriptionHtml || '<p><br></p>',
+        });
+      }
+    } else {
+      setDetailModal({
+        kind: 'parent',
+        parentTitle: row.parentRequirement,
+        detailHtml: row.detailRulesHtml,
+      });
+    }
+  }, [rowById]);
 
   const groups = useMemo(() => buildGanttGroups(iterationRows, productLine), [iterationRows, productLine]);
 
@@ -633,17 +756,18 @@ export function GanttMapPage({
       </div>
 
       <div className="min-w-0 overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
-        <table className="w-full min-w-0 table-fixed border-collapse text-sm">
+        <table className="w-full min-w-0 border-collapse text-sm" style={{ tableLayout: 'auto' }}>
           <colgroup>
             <col style={{ width: 36 }} />
-            <col style={{ width: '17%' }} />
-            <col style={{ width: '19%' }} />
+            <col style={{ width: '15%', minWidth: 80 }} />
+            <col style={{ width: '17%', minWidth: 80 }} />
+            <col style={{ minWidth: 56 }} />
             <col style={{ width: 56 }} />
             <col />
           </colgroup>
           <thead>
             <tr className="border-b border-line bg-gray-50/90">
-              <th colSpan={5} className="px-3 py-2">
+              <th colSpan={6} className="px-3 py-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="text-sm font-semibold text-ink">{headerTitle}</span>
                   <div className="flex flex-wrap items-center justify-end gap-1">
@@ -692,11 +816,14 @@ export function GanttMapPage({
             </tr>
             <tr className="border-b border-line bg-gray-50/50 text-xs text-gray-500">
               <th className="w-9 border-r border-line px-1 py-2 font-medium text-gray-700">#</th>
-              <th className="min-w-[100px] border-r border-line px-2 py-2 text-left font-medium text-gray-700">
+              <th className="min-w-[80px] border-r border-line px-2 py-2 text-left font-medium text-gray-700">
                 父需求
               </th>
-              <th className="min-w-[100px] border-r border-line px-2 py-2 text-left font-medium text-gray-700">
+              <th className="min-w-[80px] border-r border-line px-2 py-2 text-left font-medium text-gray-700">
                 子需求
+              </th>
+              <th className="min-w-[60px] border-r border-line px-2 py-2 text-left font-medium text-gray-700">
+                产品
               </th>
               <th className="w-14 border-r border-line px-1 py-2 font-medium text-gray-700">优先级</th>
               <th className="min-w-0 p-0 text-left font-medium text-gray-700">
@@ -726,7 +853,7 @@ export function GanttMapPage({
           <tbody>
             {groups.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-16 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-500">
                   当前板块暂无带时间线的迭代记录；请在对应「迭代记录」中为子需求或父需求填写起止日期。
                 </td>
               </tr>
@@ -737,7 +864,13 @@ export function GanttMapPage({
                 const rowSpan = displayBars.length;
                 const showToggle = g.bars.length > 1;
 
+                // 父需求产品人员（收起态使用父需求级，展开态各行显示各自）
+                const parentProductNames = g.parentProductOwnerIds.length > 0
+                  ? g.parentProductOwnerIds.map((id) => staffNameById.get(id) ?? id).join('、')
+                  : '—';
+
                 return displayBars.map((bar, ri) => {
+                  // 日历条显示研发测试人员
                   const names =
                     bar.assigneeIds.length > 0
                       ? bar.assigneeIds.map((id) => staffNameById.get(id) ?? id).join('、')
@@ -783,13 +916,64 @@ export function GanttMapPage({
                             ) : (
                               <span className="mt-0.5 w-5 shrink-0" />
                             )}
-                            <span>{g.parentLabel}</span>
+                            <button
+                              type="button"
+                              onClick={() => openDetailModal(g.recordId)}
+                              className="group/parent relative min-w-0 text-left text-ink [overflow-wrap:anywhere] hover:text-accent"
+                              title="点击可查看需求详情"
+                            >
+                              <span className="underline-offset-2 group-hover/parent:underline">
+                                {g.parentLabel}
+                              </span>
+                              <span className="pointer-events-none absolute -top-7 left-0 z-30 whitespace-nowrap rounded-md bg-gray-800 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity group-hover/parent:opacity-100">
+                                点击可查看需求详情
+                              </span>
+                            </button>
                           </div>
                         </td>
                       ) : null}
                       <td className="border-r border-line px-2 py-3 align-top text-gray-800 [overflow-wrap:anywhere]">
-                        {bar.subLabel}
+                        {bar.ref.type === 'sub' ? (() => {
+                          const subRef = bar.ref as { type: 'sub'; subId: string };
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => openDetailModal(bar.recordId, subRef.subId, isCollapsed)}
+                              className="group/sub relative min-w-0 text-left text-gray-800 [overflow-wrap:anywhere] hover:text-accent"
+                              title={isCollapsed ? '点击查看所有子需求详情' : '点击可查看需求详情'}
+                            >
+                              <span className="underline-offset-2 group-hover/sub:underline">
+                                {bar.subLabel}
+                              </span>
+                              <span className="pointer-events-none absolute -top-7 left-0 z-30 whitespace-nowrap rounded-md bg-gray-800 px-2 py-1 text-[11px] text-white opacity-0 shadow-lg transition-opacity group-hover/sub:opacity-100">
+                                {isCollapsed ? '点击查看所有子需求详情' : '点击可查看需求详情'}
+                              </span>
+                            </button>
+                          );
+                        })() : (
+                          <span className="text-gray-400">{bar.subLabel}</span>
+                        )}
                       </td>
+                      {/* 产品列：整组共用父需求产品人员，宽度随内容自适应 */}
+                      {ri === 0 ? (
+                        <td
+                          rowSpan={rowSpan}
+                          className="border-r border-line px-2 py-3 align-top text-xs text-gray-700 break-words"
+                          style={{ width: 1, whiteSpace: 'nowrap' }}
+                        >
+                          {parentProductNames !== '—' ? (
+                            <span className="inline-flex flex-wrap gap-x-1 gap-y-0.5">
+                              {parentProductNames.split('、').map((name, ni) => (
+                                <span key={ni} className="inline-block rounded bg-purple-50 px-1.5 py-0.5 text-purple-700 ring-1 ring-purple-100">
+                                  {name}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      ) : null}
                       {ri === 0 ? (
                         <td
                           rowSpan={rowSpan}
@@ -818,6 +1002,197 @@ export function GanttMapPage({
           </tbody>
         </table>
       </div>
+
+      {/* 需求详情抽屉 */}
+      <AnimatePresence>
+        {detailModal && (
+          <>
+            {/* 半透明遮罩，点击关闭 */}
+            <motion.div
+              key="gantt-drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-50 bg-black/25"
+              onClick={() => setDetailModal(null)}
+            />
+
+            {/* 抽屉面板 */}
+            <motion.div
+              key="gantt-drawer-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.9 }}
+              className="fixed right-0 top-0 z-50 flex h-full flex-col border-l border-line bg-white shadow-2xl"
+              style={{ width: drawerWidth }}
+            >
+              {/* 左侧拖拽调宽手柄 */}
+              <div
+                onPointerDown={onDrawerResizeStart}
+                onPointerMove={onDrawerResizeMove}
+                onPointerUp={onDrawerResizeEnd}
+                onPointerCancel={onDrawerResizeEnd}
+                className="group absolute left-0 top-0 h-full w-1 cursor-ew-resize touch-none select-none hover:w-1.5 hover:bg-accent/30 active:bg-accent/50"
+                title="拖动调整抽屉宽度"
+              >
+                {/* 中央拖拽指示点 */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-1 w-1 rounded-full bg-accent/60" />
+                  ))}
+                </div>
+              </div>
+
+              {/* 抽屉头部 */}
+              <div className="shrink-0 border-b border-line px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {detailModal.kind === 'sub' ? (
+                      <>
+                        <p className="flex flex-wrap items-center gap-1 text-[11px] text-gray-400">
+                          <span className="font-medium">子需求详情</span>
+                          <span className="text-gray-300">/</span>
+                          <span className="truncate">{detailModal.parentTitle}</span>
+                        </p>
+                        <h3 className="mt-1 break-words text-base font-semibold text-ink [overflow-wrap:anywhere]">
+                          {detailModal.subTitle}
+                        </h3>
+                      </>
+                    ) : detailModal.kind === 'all-subs' ? (
+                      <>
+                        <p className="text-[11px] font-medium text-gray-400">子需求详情</p>
+                        <h3 className="mt-1 break-words text-base font-semibold text-ink [overflow-wrap:anywhere]">
+                          {detailModal.parentTitle || '（无标题）'}
+                        </h3>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-medium text-gray-400">父需求详情</p>
+                        <h3 className="mt-1 break-words text-base font-semibold text-ink [overflow-wrap:anywhere]">
+                          {detailModal.parentTitle || '（无标题）'}
+                        </h3>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDetailModal(null)}
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    aria-label="关闭抽屉"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* all-subs 模式的 Tab 栏 */}
+                {detailModal.kind === 'all-subs' && detailModal.subs.length > 1 && (
+                  <div className="mt-3 flex gap-0.5 overflow-x-auto">
+                    {detailModal.subs.map((sub, i) => {
+                      const isActive = i === allSubsActiveIdx;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setAllSubsActiveIdx(i)}
+                          className={`shrink-0 rounded-t-md border border-b-0 px-3 py-1.5 text-xs font-medium transition-colors ${
+                            isActive
+                              ? 'border-line bg-white text-accent shadow-[0_1px_0_0_white]'
+                              : 'border-transparent text-gray-500 hover:border-line/60 hover:bg-gray-50'
+                          }`}
+                          title={sub.title}
+                        >
+                          子需求{i + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 抽屉内容区（所有模式共用） */}
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                {detailModal.kind === 'all-subs' ? (() => {
+                  const sub = detailModal.subs[allSubsActiveIdx];
+                  const html = sub?.descriptionHtml ?? '';
+                  const hasContent = html.replace(/<[^>]+>/g, '').trim();
+                  return (
+                    <>
+                      {sub?.title && (
+                        <p className="mb-3 text-xs font-medium text-gray-500">{sub.title}</p>
+                      )}
+                      {hasContent ? (
+                        <div
+                          ref={richContentRef}
+                          className="prose prose-sm max-w-none text-gray-700 [&_p]:my-1.5 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_li]:my-0.5 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_img]:cursor-zoom-in [&_img]:rounded-md"
+                          dangerouslySetInnerHTML={{ __html: html }}
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-400">该子需求暂无详细描述。</p>
+                      )}
+                    </>
+                  );
+                })() : (
+                  detailModal.detailHtml && detailModal.detailHtml.replace(/<[^>]+>/g, '').trim() ? (
+                    <div
+                      ref={richContentRef}
+                      className="prose prose-sm max-w-none text-gray-700 [&_p]:my-1.5 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_li]:my-0.5 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_img]:cursor-zoom-in [&_img]:rounded-md"
+                      dangerouslySetInnerHTML={{ __html: detailModal.detailHtml }}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-400">
+                      {detailModal.kind === 'sub' ? '该子需求暂无详细描述。' : '暂无详细规则说明。'}
+                    </p>
+                  )
+                )}
+              </div>
+
+              {/* 底部宽度提示 */}
+              <div className="shrink-0 border-t border-line px-5 py-2.5 text-right">
+                <span className="text-[11px] text-gray-300">← 拖动左侧边缘调整宽度 · {drawerWidth}px</span>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 图片灯箱 */}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <>
+            <motion.div
+              key="lightbox-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[60] flex cursor-zoom-out items-center justify-center bg-black/85 backdrop-blur-sm"
+              onClick={() => setLightboxSrc(null)}
+            >
+              <motion.img
+                key="lightbox-img"
+                src={lightboxSrc}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.18, type: 'spring', bounce: 0.1 }}
+                className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+                alt="图片预览"
+              />
+              <button
+                type="button"
+                onClick={() => setLightboxSrc(null)}
+                className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+                aria-label="关闭图片预览"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

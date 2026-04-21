@@ -38,11 +38,15 @@ export const ITERATION_SCOPE_LABEL: Record<IterationNavScope, string> = {
 
 export interface IterationSubRequirementRow {
   id: string;
-  /** 子需求描述 */
+  /** 子需求描述（纯文本标题） */
   title: string;
+  /** 子需求详细描述（富文本 HTML） */
+  descriptionHtml: string;
   /** 子需求优先级，可空（继承父需求） */
   priority: IterationPriority | '';
-  /** 产研人员 id */
+  /** 产品负责人 id 列表 */
+  productOwnerIds: string[];
+  /** 研发测试人员 id 列表（原 assigneeIds） */
   assigneeIds: string[];
   /** YYYY-MM-DD，可空 */
   dateStart: string;
@@ -61,7 +65,9 @@ export interface IterationRecordRow {
   version: string;
   /** 按数组顺序为序号 1、2、… */
   subRequirements: IterationSubRequirementRow[];
-  /** 无子需求或需在父需求上配置负责人时使用 */
+  /** 无子需求或需在父需求上配置产品负责人时使用 */
+  parentProductOwnerIds: string[];
+  /** 无子需求或需在父需求上配置研发测试时使用（原 parentAssigneeIds） */
   parentAssigneeIds: string[];
   parentDateStart: string;
   parentDateEnd: string;
@@ -79,7 +85,11 @@ export interface IterationRecordRow {
 export type IterationSubRequirementFormItem = {
   id: string;
   title: string;
+  descriptionHtml: string;
   priority: IterationPriority | '';
+  /** 产品负责人 id 列表 */
+  productOwnerIds: string[];
+  /** 研发测试人员 id 列表 */
   assigneeIds: string[];
   dateStart: string;
   dateEnd: string;
@@ -93,6 +103,9 @@ export type IterationRecordFormState = {
   /** 选填 */
   version: string;
   subRequirements: IterationSubRequirementFormItem[];
+  /** 父需求级产品负责人 */
+  parentProductOwnerIds: string[];
+  /** 父需求级研发测试人员 */
   parentAssigneeIds: string[];
   parentDateStart: string;
   parentDateEnd: string;
@@ -126,7 +139,9 @@ export function newSubRequirementFormItem(): IterationSubRequirementFormItem {
   return {
     id: `isr-new-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     title: '',
+    descriptionHtml: '<p><br></p>',
     priority: '',
+    productOwnerIds: [],
     assigneeIds: [],
     dateStart: '',
     dateEnd: '',
@@ -140,6 +155,7 @@ export function emptyIterationRecordForm(): IterationRecordFormState {
     priority: '',
     version: '',
     subRequirements: [],
+    parentProductOwnerIds: [],
     parentAssigneeIds: [],
     parentDateStart: '',
     parentDateEnd: '',
@@ -164,12 +180,15 @@ export function rowToIterationForm(row: IterationRecordRow): IterationRecordForm
     subRequirements: row.subRequirements.map((s) => ({
       id: s.id,
       title: s.title,
+      descriptionHtml: s.descriptionHtml || '<p><br></p>',
       priority: s.priority ?? '',
+      productOwnerIds: [...(s.productOwnerIds ?? [])],
       assigneeIds: [...s.assigneeIds],
       dateStart: s.dateStart,
       dateEnd: s.dateEnd,
       status: s.status,
     })),
+    parentProductOwnerIds: [...(row.parentProductOwnerIds ?? [])],
     parentAssigneeIds: [...row.parentAssigneeIds],
     parentDateStart: row.parentDateStart,
     parentDateEnd: row.parentDateEnd,
@@ -207,7 +226,9 @@ export function createIterationRowFromForm(
   const subs = form.subRequirements.map((s, i) => ({
     id: stableSubId(s.id, i),
     title: s.title.trim(),
+    descriptionHtml: s.descriptionHtml.trim() || '<p><br></p>',
     priority: parseIterationPriority(s.priority) ?? ('' as const),
+    productOwnerIds: [...new Set((s.productOwnerIds ?? []).filter(Boolean))],
     assigneeIds: [...new Set(s.assigneeIds.filter(Boolean))],
     dateStart: (s.dateStart || '').trim(),
     dateEnd: (s.dateEnd || '').trim(),
@@ -222,6 +243,7 @@ export function createIterationRowFromForm(
     priority: p,
     version: (form.version ?? '').trim(),
     subRequirements: subs,
+    parentProductOwnerIds: [...new Set((form.parentProductOwnerIds ?? []).filter(Boolean))],
     parentAssigneeIds: [...new Set(form.parentAssigneeIds.filter(Boolean))],
     parentDateStart: (form.parentDateStart || '').trim(),
     parentDateEnd: (form.parentDateEnd || '').trim(),
@@ -264,6 +286,7 @@ export function migrateLegacyIterationRow(legacy: LegacyIterationRecordRow): Ite
     priority: 'B',
     version: '',
     subRequirements: [],
+    parentProductOwnerIds: [],
     parentAssigneeIds: [],
     parentDateStart: '',
     parentDateEnd: '',
@@ -290,13 +313,16 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
       {
         id: 'isr-yb-1a',
         title: '导出模板增加列',
+        descriptionHtml: '<p><br></p>',
         priority: '',
+        productOwnerIds: [],
         assigneeIds: ['ps-1'],
         dateStart: '2026-03-25',
         dateEnd: '2026-03-30',
         status: 'released',
       },
     ],
+    parentProductOwnerIds: [],
     parentAssigneeIds: [],
     parentDateStart: '',
     parentDateEnd: '',
@@ -316,7 +342,9 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
       {
         id: 'isr-yb-2a',
         title: '多文件选择与队列 UI',
+        descriptionHtml: '<p><br></p>',
         priority: '',
+        productOwnerIds: [],
         assigneeIds: ['ps-1', 'ps-2'],
         dateStart: '2026-04-05',
         dateEnd: '2026-04-12',
@@ -325,13 +353,16 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
       {
         id: 'isr-yb-2b',
         title: '上传进度与失败重试',
+        descriptionHtml: '<p><br></p>',
         priority: '',
+        productOwnerIds: [],
         assigneeIds: ['ps-2'],
         dateStart: '2026-04-08',
         dateEnd: '2026-04-15',
         status: 'in_progress',
       },
     ],
+    parentProductOwnerIds: [],
     parentAssigneeIds: [],
     parentDateStart: '',
     parentDateEnd: '',
@@ -348,6 +379,7 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
     priority: 'A',
     version: 'v0.9.0',
     subRequirements: [],
+    parentProductOwnerIds: [],
     parentAssigneeIds: ['ps-4'],
     parentDateStart: '2026-04-10',
     parentDateEnd: '2026-04-20',
@@ -367,13 +399,16 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
       {
         id: 'isr-sys-1a',
         title: '菜单与路由联合筛选',
+        descriptionHtml: '<p><br></p>',
         priority: '',
+        productOwnerIds: [],
         assigneeIds: ['ps-1'],
         dateStart: '2026-04-12',
         dateEnd: '2026-04-18',
         status: 'pending',
       },
     ],
+    parentProductOwnerIds: [],
     parentAssigneeIds: ['ps-3'],
     parentDateStart: '',
     parentDateEnd: '',
@@ -393,13 +428,16 @@ export const iterationRecordSeedData: IterationRecordRow[] = _iterationRecordsFr
       {
         id: 'isr-m-1a',
         title: '门派介绍多 Tab',
+        descriptionHtml: '<p><br></p>',
         priority: '',
+        productOwnerIds: [],
         assigneeIds: ['ps-4', 'ps-1'],
         dateStart: '2026-04-01',
         dateEnd: '2026-04-14',
         status: 'testing',
       },
     ],
+    parentProductOwnerIds: [],
     parentAssigneeIds: [],
     parentDateStart: '',
     parentDateEnd: '',

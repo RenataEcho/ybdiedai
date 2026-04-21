@@ -2,6 +2,9 @@ export type PrototypeProductLine = 'youbao' | 'youboom' | 'mentor';
 
 export type RequirementType = 'new-menu' | 'existing-feature';
 
+/** 原型设计模式：管理后台 or 移动端（H5） */
+export type DesignMode = 'admin' | 'mobile';
+
 export type SavedPrototype = {
   id: string;
   queueId?: string;
@@ -11,6 +14,8 @@ export type SavedPrototype = {
   description: string;
   menuPath?: string;
   requirementType?: RequirementType;
+  /** 设计模式：admin = 管理后台，mobile = 移动端 H5 */
+  designMode?: DesignMode;
   createdAt: number;
   updatedAt: number;
 };
@@ -40,6 +45,7 @@ export function createPrototype(
   queueId?: string,
   menuPath?: string,
   requirementType?: RequirementType,
+  designMode?: DesignMode,
 ): SavedPrototype {
   const now = Date.now();
   return {
@@ -51,6 +57,7 @@ export function createPrototype(
     description,
     menuPath,
     requirementType,
+    designMode,
     createdAt: now,
     updatedAt: now,
   };

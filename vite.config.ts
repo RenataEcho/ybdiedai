@@ -60,12 +60,108 @@ function saveFieldConfigDescriptionsPlugin(): Plugin {
  */
 function saveWorkspaceSnapshotPlugin(): Plugin {
   const apiPath = '/__dev/api/save-workspace-snapshot';
+  const loadSeedPath = '/__dev/api/load-seed';
   return {
     name: 'save-workspace-snapshot',
     configureServer(server) {
       const mockDir = path.resolve(__dirname, 'src/mock');
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0];
+
+        // GET /__dev/fix-localstorage — 返回 HTML 页面，自动把 seed 数据补入 localStorage 后跳回应用
+        if (req.method === 'GET' && url === '/__dev/fix-localstorage') {
+          const fileMap: Record<string, { storageKey: string; file: string }> = {
+            iterationRecords: { storageKey: 'ybdiedai-iteration-records-v1', file: 'iteration-records-seed.json' },
+            productStaff: { storageKey: 'ybdiedai-product-staff-v2', file: 'product-staff-seed.json' },
+            sectGuild: { storageKey: 'ybdiedai-sect-guild-v2', file: 'sect-guild-seed.json' },
+            rewardManagement: { storageKey: 'ybdiedai-reward-management-v1', file: 'reward-management-seed.json' },
+            projectManagement: { storageKey: 'ybdiedai-project-management-v1', file: 'project-management-seed.json' },
+            customerService: { storageKey: 'ybdiedai-customer-service-v1', file: 'customer-service-seed.json' },
+            youboomTeam: { storageKey: 'ybdiedai-youboom-team-v1', file: 'youboom-team-seed.json' },
+            academyCategories: { storageKey: 'ybdiedai-academy-categories-v1', file: 'academy-categories-seed.json' },
+            academyContents: { storageKey: 'ybdiedai-academy-contents-v1', file: 'academy-contents-seed.json' },
+          };
+          // 读取所有 seed 数据内嵌进 HTML
+          const seedPayload: Record<string, unknown> = {};
+          for (const [key, { file }] of Object.entries(fileMap)) {
+            try {
+              seedPayload[key] = JSON.parse(fs.readFileSync(path.join(mockDir, file), 'utf8'));
+            } catch { seedPayload[key] = []; }
+          }
+          const storageMap: Record<string, string> = {};
+          for (const [key, { storageKey }] of Object.entries(fileMap)) {
+            storageMap[key] = storageKey;
+          }
+          const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>修复本地数据</title>
+<style>body{font-family:monospace;background:#1e2232;color:#e5e7eb;padding:32px;}</style>
+</head><body>
+<h2 style="color:#a5b4fc">正在从仓库补入缺失数据…</h2>
+<pre id="log"></pre>
+<script>
+const seed = ${JSON.stringify(seedPayload)};
+const map = ${JSON.stringify(storageMap)};
+let log = '';
+let totalAdded = 0;
+for (const [key, storageKey] of Object.entries(map)) {
+  const seedArr = seed[key] || [];
+  const local = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const existIds = new Set(local.map(r => r.id).filter(Boolean));
+  const toAdd = seedArr.filter(r => r.id && !existIds.has(r.id));
+  if (toAdd.length > 0) {
+    localStorage.setItem(storageKey, JSON.stringify([...local, ...toAdd]));
+    log += key + ': 补入 ' + toAdd.length + ' 条 (' + toAdd.map(r=>r.id).join(', ') + ')\\n';
+    totalAdded += toAdd.length;
+  } else {
+    log += key + ': 已是最新，无需补入\\n';
+  }
+}
+log += '\\n共补入 ' + totalAdded + ' 条，2秒后跳回应用…';
+document.getElementById('log').textContent = log;
+setTimeout(() => { window.location.href = '/'; }, 2000);
+<\/script>
+</body></html>`;
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.end(html);
+          return;
+        }
+
+        // GET /__dev/api/load-seed?key=iterationRecords — 直接从文件读 seed 返回给浏览器
+        if (req.method === 'GET' && url === loadSeedPath) {
+          const params = new URLSearchParams(req.url?.split('?')[1] ?? '');
+          const key = params.get('key') ?? '';
+          const fileMap: Record<string, string> = {
+            iterationRecords: 'iteration-records-seed.json',
+            productStaff: 'product-staff-seed.json',
+            sectGuild: 'sect-guild-seed.json',
+            rewardManagement: 'reward-management-seed.json',
+            projectManagement: 'project-management-seed.json',
+            customerService: 'customer-service-seed.json',
+            youboomTeam: 'youboom-team-seed.json',
+            academyCategories: 'academy-categories-seed.json',
+            academyContents: 'academy-contents-seed.json',
+          };
+          const filename = fileMap[key];
+          if (!filename) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: `unknown key: ${key}` }));
+            return;
+          }
+          try {
+            const raw = fs.readFileSync(path.join(mockDir, filename), 'utf8');
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(raw);
+          } catch (e) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: String(e) }));
+          }
+          return;
+        }
+
         if (req.method !== 'POST' || url !== apiPath) { next(); return; }
         let body = '';
         req.on('data', (chunk: Buffer | string) => { body += typeof chunk === 'string' ? chunk : chunk.toString(); });

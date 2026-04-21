@@ -7,8 +7,21 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { readLocalJson, STORAGE_KEYS } from './localWorkspacePersistence';
 
 const API_URL = '/__dev/api/save-workspace-snapshot';
+const LOAD_SEED_URL = '/__dev/api/load-seed';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
+
+const STORAGE_KEY_MAP: Record<string, string> = {
+  iterationRecords: 'ybdiedai-iteration-records-v1',
+  productStaff: 'ybdiedai-product-staff-v2',
+  sectGuild: 'ybdiedai-sect-guild-v2',
+  rewardManagement: 'ybdiedai-reward-management-v1',
+  projectManagement: 'ybdiedai-project-management-v1',
+  customerService: 'ybdiedai-customer-service-v1',
+  youboomTeam: 'ybdiedai-youboom-team-v1',
+  academyCategories: 'ybdiedai-academy-categories-v1',
+  academyContents: 'ybdiedai-academy-contents-v1',
+};
 
 const KEY_LABEL: Record<string, string> = {
   iterationRecords: '迭代记录',
@@ -36,6 +49,8 @@ function collectPayload() {
   };
 }
 
+type RestoreStatus = 'idle' | 'restoring' | 'success' | 'error';
+
 export function DevSaveToRepo() {
   if (!(import.meta as { env?: { DEV?: boolean } }).env?.DEV) return null;
 
@@ -43,6 +58,8 @@ export function DevSaveToRepo() {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [written, setWritten] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [restoreStatus, setRestoreStatus] = useState<RestoreStatus>('idle');
+  const [restoreMsg, setRestoreMsg] = useState('');
 
   // 拖拽状态
   const [pos, setPos] = useState<{ right: number; bottom: number }>({ right: 24, bottom: 24 });
@@ -84,6 +101,36 @@ export function DevSaveToRepo() {
   }, []);
 
   const payload = collectPayload();
+
+  async function handleRestoreFromSeed() {
+    setRestoreStatus('restoring');
+    setRestoreMsg('');
+    try {
+      const keys = Object.keys(STORAGE_KEY_MAP);
+      let addedTotal = 0;
+      for (const key of keys) {
+        const res = await fetch(`${LOAD_SEED_URL}?key=${key}`);
+        if (!res.ok) continue;
+        const seedData = await res.json() as unknown[];
+        if (!Array.isArray(seedData)) continue;
+        const storageKey = STORAGE_KEY_MAP[key];
+        const localRaw = localStorage.getItem(storageKey);
+        const localData: unknown[] = localRaw ? (JSON.parse(localRaw) as unknown[]) : [];
+        const existIds = new Set((localData as Array<{ id?: string }>).map((r) => r.id).filter(Boolean));
+        const toAdd = (seedData as Array<{ id?: string }>).filter((r) => r.id && !existIds.has(r.id));
+        if (toAdd.length > 0) {
+          localStorage.setItem(storageKey, JSON.stringify([...localData, ...toAdd]));
+          addedTotal += toAdd.length;
+        }
+      }
+      setRestoreMsg(`已从仓库补入 ${addedTotal} 条新数据，即将刷新…`);
+      setRestoreStatus('success');
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (e) {
+      setRestoreMsg(String(e));
+      setRestoreStatus('error');
+    }
+  }
 
   async function handleSave() {
     setStatus('saving');
@@ -184,9 +231,41 @@ export function DevSaveToRepo() {
               >×</button>
             </div>
 
-            <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12, lineHeight: 1.6 }}>
               将当前 localStorage 中所有数据写回仓库 JSON 种子文件，下次冷启动（或其他人拉取代码后）也将使用这份数据作为初始值。
             </p>
+
+            {/* 从仓库恢复按钮 */}
+            <div style={{ marginBottom: 16 }}>
+              <button
+                onClick={() => { void handleRestoreFromSeed(); }}
+                disabled={restoreStatus === 'restoring'}
+                style={{
+                  width: '100%',
+                  padding: '8px 0',
+                  borderRadius: 8,
+                  background: restoreStatus === 'restoring'
+                    ? 'rgba(52,211,153,0.2)'
+                    : 'rgba(52,211,153,0.15)',
+                  color: '#34d399',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  border: '1px solid rgba(52,211,153,0.3)',
+                  cursor: restoreStatus === 'restoring' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {restoreStatus === 'restoring' ? '同步中…' : '↓ 从仓库补入本地缺失数据'}
+              </button>
+              {restoreMsg && (
+                <p style={{
+                  marginTop: 6, fontSize: 11, textAlign: 'center',
+                  color: restoreStatus === 'error' ? '#fca5a5' : '#6ee7b7',
+                }}>
+                  {restoreMsg}
+                </p>
+              )}
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginBottom: 16 }} />
 
             {/* 数据预览 */}
             <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>

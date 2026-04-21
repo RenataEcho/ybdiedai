@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -11,6 +10,7 @@ import Highlight from '@tiptap/extension-highlight';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
+import { ResizableImageExtension } from './ResizableImageExtension';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Link as LinkIcon, Image as ImageIcon,
@@ -411,11 +411,7 @@ export function RichTextEditor({
         openOnClick: false,
         HTMLAttributes: { class: 'text-accent underline cursor-pointer' },
       }),
-      Image.configure({
-        inline: false,
-        allowBase64: true,
-        HTMLAttributes: { class: 'rte-img' },
-      }),
+      ResizableImageExtension,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -441,13 +437,17 @@ export function RichTextEditor({
   /* ── 图片处理 ── */
   const insertImageFile = useCallback((file: File) => {
     if (!editor) return;
-    const url = URL.createObjectURL(file);
-    editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      if (src) editor.chain().focus().setResizableImage({ src, alt: file.name }).run();
+    };
+    reader.readAsDataURL(file);
   }, [editor]);
 
   const insertImageUrl = (url: string) => {
     if (!editor || !url.trim()) return;
-    editor.chain().focus().setImage({ src: url.trim() }).run();
+    editor.chain().focus().setResizableImage({ src: url.trim() }).run();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -456,12 +456,7 @@ export function RichTextEditor({
     e.target.value = '';
   };
 
-  /* ── 拖放 & 粘贴 图片 ── */
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
-    if (file) { e.preventDefault(); insertImageFile(file); }
-  }, [insertImageFile]);
-
+  /* ── 粘贴图片（拖放由 ResizableImageExtension ProseMirror Plugin 处理） ── */
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const file = Array.from(e.clipboardData.files).find(f => f.type.startsWith('image/'));
     if (file) { e.preventDefault(); insertImageFile(file); }
@@ -631,8 +626,6 @@ export function RichTextEditor({
         <div
           className="relative flex-1 overflow-y-auto"
           style={{ minHeight }}
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
           onPaste={handlePaste}
         >
           <EditorContent editor={editor} className="h-full" />

@@ -64,6 +64,7 @@ import {
   Wand2,
   PanelLeftClose,
   PanelLeftOpen,
+  Smartphone,
 } from 'lucide-react';
 import { 
   individualData, 
@@ -145,6 +146,7 @@ import {
   createSectGuildRowFromForm,
   emptySectGuildForm,
   rowToSectGuildForm,
+  sectGuildProjectsMockData,
   type SectGuildFormState,
   type SectGuildStatus,
 } from './sectGuildModel';
@@ -191,6 +193,7 @@ import { GanttMapPage, type GanttBarRef } from './GanttMapPage';
 import { DashboardPage } from './DashboardPage';
 import RequirementPrototypePage from './RequirementPrototypePage';
 import PrototypeViewerPage from './PrototypeViewerPage';
+import UserPrototypePage from './UserPrototypePage';
 import {
   loadPrototypes,
   savePrototypes,
@@ -330,7 +333,8 @@ type ModuleType =
   | 'productStaff'
   | 'ganttMap'
   | 'dashboard'
-  | 'requirementPrototype';
+  | 'requirementPrototype'
+  | 'userPrototype';
 
 const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
   leaderboard: '榜单数据',
@@ -352,6 +356,7 @@ const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
   ganttMap: '甘特地图',
   dashboard: 'Dashboard',
   requirementPrototype: '需求原型设计',
+  userPrototype: '用户端需求原型',
 };
 
 type LeaderboardTab = 'individual' | 'team' | 'community';
@@ -842,6 +847,9 @@ export default function App() {
     system: true,
   });
 
+  // 「用户端需求原型」当前所属业务线（用于区分三个菜单入口）
+  const [userPrototypeLine, setUserPrototypeLine] = useState<'youbao' | 'youboom' | 'mentor'>('youbao');
+
   const youbaoChildren = [
     { id: 'dashboard' as const, name: 'Dashboard', icon: LayoutDashboard },
     { id: 'leaderboard' as const, name: '榜单数据', icon: BarChart3 },
@@ -870,7 +878,8 @@ export default function App() {
     activeModule === 'customerServiceManagement' ||
     activeModule === 'auditEntryWorkbench' ||
     activeModule === 'auditMessageNotification' ||
-    activeModule === 'requirementPrototype';
+    activeModule === 'requirementPrototype' ||
+    activeModule === 'userPrototype';
 
   const pageRuleHeaderAction = useMemo(() => {
     if (activeModule === 'ganttMap' || activeModule === 'dashboard') {
@@ -1497,6 +1506,24 @@ export default function App() {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, youbao: true }));
+                    selectModule('userPrototype');
+                    setUserPrototypeLine('youbao');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'userPrototype' && userPrototypeLine === 'youbao' ? 'bg-sky-500/8 text-sky-600 dark:text-sky-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Smartphone className={`shrink-0 h-4 w-4 ${activeModule === 'userPrototype' && userPrototypeLine === 'youbao' ? 'text-sky-500' : 'text-gray-400'}`} />
+                    <span className="nav-label truncate">用户端需求原型</span>
+                  </span>
+                  {activeModule === 'userPrototype' && userPrototypeLine === 'youbao' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
               </div>
             )}
           </div>
@@ -1588,6 +1615,24 @@ export default function App() {
                     <span className="nav-label truncate">团队数据</span>
                   </span>
                   {activeModule === 'youboomTeam' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, youboom: true }));
+                    selectModule('userPrototype');
+                    setUserPrototypeLine('youboom');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'userPrototype' && userPrototypeLine === 'youboom' ? 'bg-sky-500/8 text-sky-600 dark:text-sky-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Smartphone className={`shrink-0 h-4 w-4 ${activeModule === 'userPrototype' && userPrototypeLine === 'youboom' ? 'text-sky-500' : 'text-gray-400'}`} />
+                    <span className="nav-label truncate">用户端需求原型</span>
+                  </span>
+                  {activeModule === 'userPrototype' && userPrototypeLine === 'youboom' ? <ChevronRight className="h-4 w-4" /> : null}
                 </button>
               </div>
             )}
@@ -1763,6 +1808,24 @@ export default function App() {
                     </button>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, mentor: true }));
+                    selectModule('userPrototype');
+                    setUserPrototypeLine('mentor');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'userPrototype' && userPrototypeLine === 'mentor' ? 'bg-sky-500/8 text-sky-600 dark:text-sky-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Smartphone className={`shrink-0 h-4 w-4 ${activeModule === 'userPrototype' && userPrototypeLine === 'mentor' ? 'text-sky-500' : 'text-gray-400'}`} />
+                    <span className="nav-label truncate">用户端需求原型</span>
+                  </span>
+                  {activeModule === 'userPrototype' && userPrototypeLine === 'mentor' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
               </div>
             )}
           </div>
@@ -3417,6 +3480,7 @@ export default function App() {
                   pageSize={pageSize}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={setPageSize}
+                  projectsMap={sectGuildProjectsMockData}
                   onEdit={(row) => {
                     setSideDrawer({
                       variant: 'sect-guild',
@@ -3562,6 +3626,10 @@ export default function App() {
                       }
                     }}
                   />
+                </div>
+              ) : activeModule === 'userPrototype' ? (
+                <div className="p-4 sm:p-5" style={{ height: 'calc(100vh - 40px)' }}>
+                  <UserPrototypePage productLine={userPrototypeLine} />
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-16 text-center">
