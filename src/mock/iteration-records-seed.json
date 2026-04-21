@@ -9,7 +9,11 @@
       {
         "id": "isr-1776160704193-0-5b73",
         "title": "新增榜单数据",
+        "descriptionHtml": "<p><br></p>",
         "priority": "SSS",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -26,7 +30,11 @@
       {
         "id": "isr-1776160704193-1-76ac",
         "title": "新增首页推荐",
+        "descriptionHtml": "<p><br></p>",
         "priority": "SS",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -42,7 +50,11 @@
       {
         "id": "isr-1776160704193-2-21c6",
         "title": "学院管理优化",
+        "descriptionHtml": "<p><br></p>",
         "priority": "S",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -58,7 +70,11 @@
       {
         "id": "isr-1776160704193-3-8b83",
         "title": "项目管理详情优化",
+        "descriptionHtml": "<p><br></p>",
         "priority": "A",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -73,7 +89,11 @@
       {
         "id": "isr-1776160704193-4-0960",
         "title": "对接导师系统api",
+        "descriptionHtml": "<p><br></p>",
         "priority": "SSS",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-5",
@@ -88,7 +108,11 @@
       {
         "id": "isr-1776225873215-5-72f1",
         "title": "小程序整体前端对齐APP样式和接口",
+        "descriptionHtml": "<p><br></p>",
         "priority": "SSS",
+        "productOwnerIds": [
+          "ps-4"
+        ],
         "assigneeIds": [
           "ps-1",
           "ps-3",
@@ -100,6 +124,9 @@
         "dateEnd": "2026-04-24",
         "status": "in_progress"
       }
+    ],
+    "parentProductOwnerIds": [
+      "ps-4"
     ],
     "parentAssigneeIds": [
       "ps-1",
@@ -124,7 +151,9 @@
       {
         "id": "isr-1776230785571-0-084e",
         "title": "后台增加奖励管理",
+        "descriptionHtml": "<p><br></p>",
         "priority": "A",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-8",
           "ps-7"
@@ -136,7 +165,9 @@
       {
         "id": "isr-1776230785571-1-3e8e",
         "title": "前端增加奖励钱包",
+        "descriptionHtml": "<p><br></p>",
         "priority": "A",
+        "productOwnerIds": [],
         "assigneeIds": [
           "ps-8",
           "ps-7"
@@ -146,6 +177,7 @@
         "status": "pending"
       }
     ],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [
       "ps-1",
       "ps-7",
@@ -166,6 +198,7 @@
     "priority": "B",
     "version": "",
     "subRequirements": [],
+    "parentProductOwnerIds": [],
     "parentAssigneeIds": [],
     "parentDateStart": "",
     "parentDateEnd": "",
@@ -191,7 +224,9 @@
         ],
         "dateStart": "2026-04-15",
         "dateEnd": "2026-04-17",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       },
       {
         "id": "isr-1776232264846-1-ba7f",
@@ -202,7 +237,9 @@
         ],
         "dateStart": "2026-04-15",
         "dateEnd": "2026-04-17",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       },
       {
         "id": "isr-1776232264846-2-5c81",
@@ -213,7 +250,9 @@
         ],
         "dateStart": "2026-04-20",
         "dateEnd": "2026-04-21",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       },
       {
         "id": "isr-1776232264846-3-55eb",
@@ -224,7 +263,9 @@
         ],
         "dateStart": "2026-04-17",
         "dateEnd": "2026-04-17",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       },
       {
         "id": "isr-1776233490730-4-9e1b",
@@ -235,7 +276,9 @@
         ],
         "dateStart": "2026-04-22",
         "dateEnd": "2026-04-24",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       }
     ],
     "parentAssigneeIds": [
@@ -249,7 +292,8 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p>待开发</p>",
-    "createdAt": "2026-04-14T09:00:00.000Z"
+    "createdAt": "2026-04-14T09:00:00.000Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776160209279",
@@ -268,7 +312,8 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-14T09:50:09.279Z"
+    "createdAt": "2026-04-14T09:50:09.279Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776161825123",
@@ -288,7 +333,9 @@
         ],
         "dateStart": "2026-04-20",
         "dateEnd": "2026-04-24",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       }
     ],
     "parentAssigneeIds": [
@@ -303,7 +350,8 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-14T10:17:05.123Z"
+    "createdAt": "2026-04-14T10:17:05.123Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776233735007",
@@ -327,7 +375,8 @@
     "status": "in_progress",
     "releaseTime": "",
     "notesHtml": "<p>穿插需求太多,已delay</p>",
-    "createdAt": "2026-04-15T06:15:35.007Z"
+    "createdAt": "2026-04-15T06:15:35.007Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776238217657",
@@ -349,7 +398,8 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p>右豹中台增加基Dashboard,方便运营监测数据</p>",
-    "createdAt": "2026-04-15T07:30:17.658Z"
+    "createdAt": "2026-04-15T07:30:17.658Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776241008136",
@@ -365,7 +415,9 @@
         "assigneeIds": [],
         "dateStart": "2026-04-13",
         "dateEnd": "2026-04-17",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       },
       {
         "id": "isr-1776241008136-1-3800",
@@ -374,7 +426,9 @@
         "assigneeIds": [],
         "dateStart": "2026-04-13",
         "dateEnd": "2026-04-17",
-        "status": "pending"
+        "status": "pending",
+        "descriptionHtml": "<p><br></p>",
+        "productOwnerIds": []
       }
     ],
     "parentAssigneeIds": [],
@@ -384,7 +438,8 @@
     "status": "in_progress",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-15T08:16:48.136Z"
+    "createdAt": "2026-04-15T08:16:48.136Z",
+    "parentProductOwnerIds": []
   },
   {
     "id": "ir-1776242409295",
@@ -405,6 +460,7 @@
     "status": "pending",
     "releaseTime": "",
     "notesHtml": "<p><br></p>",
-    "createdAt": "2026-04-15T08:40:09.296Z"
+    "createdAt": "2026-04-15T08:40:09.296Z",
+    "parentProductOwnerIds": []
   }
 ]
