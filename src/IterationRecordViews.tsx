@@ -17,6 +17,16 @@ import { RichTextEditor } from './RichTextEditor';
 import { useResizableTableColumns } from './resizableTableColumns';
 import { Pagination } from './Pagination';
 
+/**
+ * 修正 HTML 内嵌图片路径：将 src="/uploads/..." 替换为带 BASE_URL 的路径，
+ * 解决 GitHub Pages 子路径部署下图片 404 的问题。
+ */
+function fixUploadPaths(html: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return html.replace(/src="\/uploads\//g, `src="${prefix}uploads/`);
+}
+
 /** 列默认宽度（px），与表头列数一致；勿在 render 内联新建数组 */
 const ITERATION_RECORD_COL_DEFAULTS = [200, 88, 104, 160, 120, 140, 130, 100, 100, 132, 180, 128];
 
@@ -88,7 +98,7 @@ function RichOrPlainBlock({ value }: { value: string }) {
     return (
       <div
         className="prose prose-sm min-w-0 max-w-none break-words text-gray-700 [overflow-wrap:anywhere] [&_p]:my-1 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_li]:my-0.5"
-        dangerouslySetInnerHTML={{ __html: value }}
+        dangerouslySetInnerHTML={{ __html: fixUploadPaths(value) }}
       />
     );
   }
@@ -301,7 +311,7 @@ function RuleDetailDrawer({
             <div
               ref={richRef}
               className="prose prose-sm max-w-none text-gray-700 [&_p]:my-1.5 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_li]:my-0.5 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_img]:cursor-zoom-in [&_img]:rounded-md"
-              dangerouslySetInnerHTML={{ __html: currentHtml }}
+              dangerouslySetInnerHTML={{ __html: fixUploadPaths(currentHtml) }}
             />
           ) : (
             <p className="text-sm text-gray-400">
