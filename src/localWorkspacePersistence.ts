@@ -202,7 +202,27 @@ export function loadIterationRecordsFromStorage(): IterationRecordRow[] {
     }
   }
 
-  // 有新条目补入时立即写回 localStorage，确保下次刷新也能读到
+  // 对已有条目：如果 localStorage 里某子需求的 descriptionHtml 为空，
+  // 而 seed 里同 id 的子需求有内容，则用 seed 内容回填（修复历史旧数据缺图问题）
+  const seedById = new Map(iterationRecordSeedData.map((r) => [r.id, r]));
+  for (const row of rows) {
+    const seedRow = seedById.get(row.id);
+    if (!seedRow) continue;
+    const seedSubMap = new Map(seedRow.subRequirements.map((s) => [s.id, s]));
+    let rowPatched = false;
+    for (const sub of row.subRequirements) {
+      if (!sub.descriptionHtml) {
+        const seedSub = seedSubMap.get(sub.id);
+        if (seedSub?.descriptionHtml) {
+          sub.descriptionHtml = seedSub.descriptionHtml;
+          rowPatched = true;
+        }
+      }
+    }
+    if (rowPatched) merged = true;
+  }
+
+  // 有新条目补入或字段回填时立即写回 localStorage，确保下次刷新也能读到
   if (merged) {
     writeLocalJson(STORAGE_KEYS.iterationRecords, rows);
   }
