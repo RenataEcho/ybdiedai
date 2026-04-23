@@ -6,6 +6,12 @@ import { ITERATION_PRIORITY_LABEL } from './iterationRecordModel';
 import type { ProductLine } from './pageRuleCatalog';
 import { PRODUCT_LINE_NAV_ORDER } from './pageRuleCatalog';
 
+function fixUploadPaths(html: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return html.replace(/src="\/uploads\//g, `src="${prefix}uploads/`);
+}
+
 const GANTT_TAB_LABEL: Record<ProductLine, string> = {
   youbao: '右豹迭代',
   youboom: 'youboom迭代',
@@ -1126,7 +1132,7 @@ export function GanttMapPage({
                         <div
                           ref={richContentRef}
                           className="prose prose-sm max-w-none text-gray-700 [&_p]:my-1.5 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_li]:my-0.5 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_img]:cursor-zoom-in [&_img]:rounded-md"
-                          dangerouslySetInnerHTML={{ __html: html }}
+                          dangerouslySetInnerHTML={{ __html: fixUploadPaths(html) }}
                         />
                       ) : (
                         <p className="text-sm text-gray-400">该子需求暂无详细描述。</p>
@@ -1138,7 +1144,7 @@ export function GanttMapPage({
                     <div
                       ref={richContentRef}
                       className="prose prose-sm max-w-none text-gray-700 [&_p]:my-1.5 [&_ul]:my-1 [&_ul]:pl-6 [&_ol]:my-1 [&_ol]:pl-6 [&_li]:my-0.5 [&_ul>li]:list-disc [&_ol>li]:list-decimal [&_img]:cursor-zoom-in [&_img]:rounded-md"
-                      dangerouslySetInnerHTML={{ __html: detailModal.detailHtml }}
+                          dangerouslySetInnerHTML={{ __html: fixUploadPaths(detailModal.detailHtml) }}
                     />
                   ) : (
                     <p className="text-sm text-gray-400">

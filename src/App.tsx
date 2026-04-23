@@ -206,6 +206,12 @@ import {
 import { DevSaveToRepo } from './DevSaveToRepo';
 import { ProjectCustomizationPage } from './ProjectCustomizationPage';
 
+function fixUploadPaths(html: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const prefix = base.endsWith('/') ? base : `${base}/`;
+  return html.replace(/src="\/uploads\//g, `src="${prefix}uploads/`);
+}
+
 const PM_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-pm-drawer-width';
 const ITERATION_RECORD_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-iteration-record-drawer-width';
 
@@ -5078,7 +5084,7 @@ function AppInner({ onLogout }: { onLogout: () => void }) {
               ) : /^\s*</.test(contentPreview.content) ? (
                 <div
                   className="prose prose-sm max-w-none text-gray-800"
-                  dangerouslySetInnerHTML={{ __html: contentPreview.content }}
+                  dangerouslySetInnerHTML={{ __html: fixUploadPaths(contentPreview.content) }}
                 />
               ) : (
                 <pre className="whitespace-pre-wrap break-words font-sans text-sm text-gray-800">
