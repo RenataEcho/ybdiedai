@@ -251,8 +251,9 @@ export interface AcademyContent {
   categoryId: string;
   projectName: string;
   projectId: string;
-  contentType: 'article' | 'video';
-  /** 图文为正文摘要或 HTML；视频为播放地址 */
+  /** 文章资讯：H5/公众号跳转地址；图文教程：富文本内容；视频教程：视频播放地址 */
+  contentType: 'news' | 'tutorial' | 'video';
+  /** 文章资讯为跳转地址；图文教程为 HTML 正文；视频教程为播放地址 */
   content: string;
   status: 'show' | 'hide';
   updateTime: string;
@@ -309,9 +310,8 @@ export const academyContentInitialData: AcademyContent[] = _academyContentsFromF
     categoryId: 'ac-cat-1',
     projectName: '番茄小说',
     projectId: 'P-TOMATO',
-    contentType: 'article',
-    content:
-      '<p>欢迎学习右豹商学院课程。本文介绍平台基础操作与收益结算规则，建议新手完整阅读。</p><p>更多内容请在移动端查看完整图文。</p>',
+    contentType: 'news',
+    content: 'https://mp.weixin.qq.com/s/example-article-001',
     status: 'show',
     updateTime: '2024-03-21 11:00:00',
   },
@@ -340,8 +340,8 @@ export const academyContentInitialData: AcademyContent[] = _academyContentsFromF
     categoryId: 'ac-cat-2',
     projectName: '知乎故事',
     projectId: 'P-ZHIHU-STORY',
-    contentType: 'article',
-    content: '矩阵账号的核心是内容节奏与账号定位。建议按周规划选题，并同步数据复盘。',
+    contentType: 'tutorial',
+    content: '<p>矩阵账号的核心是内容节奏与账号定位。建议按周规划选题，并同步数据复盘。</p>',
     status: 'show',
     updateTime: '2024-03-21 12:00:00',
   },
@@ -370,8 +370,8 @@ export const academyContentInitialData: AcademyContent[] = _academyContentsFromF
     categoryId: 'ac-cat-3',
     projectName: '百度网盘',
     projectId: 'P-BAIDU-PAN',
-    contentType: 'article',
-    content: '该内容所属分类当前为隐藏状态，可用于后台联调与预览。',
+    contentType: 'news',
+    content: 'https://example.com/article/draft-001',
     status: 'hide',
     updateTime: '2024-03-21 13:00:00',
   },
@@ -514,8 +514,8 @@ export const fieldConfigurationDataBase: FieldConfiguration[] = [
   { id: 'f55', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'categoryId', fieldCnName: '所属分类', description: '该内容归属的商学院分类' },
   { id: 'f56', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'projectName', fieldCnName: '关联品牌项目名称', description: '与内容关联的推广或品牌项目名称' },
   { id: 'f57', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'projectId', fieldCnName: '关联品牌项目ID', description: '关联项目的唯一编号' },
-  { id: 'f58', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'contentType', fieldCnName: '内容类型', description: '图文或视频，决定前台预览与播放方式' },
-  { id: 'f59', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'content', fieldCnName: '内容', description: '图文为正文章节或富文本；视频为可播放的地址链接' },
+  { id: 'f58', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'contentType', fieldCnName: '内容类型', description: '文章资讯（H5跳转）、图文教程（富文本编辑）或视频教程（后台上传视频），决定前台预览与播放方式' },
+  { id: 'f59', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'content', fieldCnName: '内容', description: '文章资讯为公众号或站内外跳转地址；图文教程为富文本正文；视频教程为可播放的视频地址' },
   { id: 'f60', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'status', fieldCnName: '状态', description: '内容在前台的显示或隐藏' },
   { id: 'f61', menuName: '内容配置', routeKey: 'academy-content', fieldEnName: 'updateTime', fieldCnName: '更新时间', description: '内容最后一次保存或发布的时间' },
 

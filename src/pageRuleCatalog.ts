@@ -252,6 +252,18 @@ export const PAGE_RULE_CATALOG: PageRuleCatalogEntry[] = [
     ],
   },
   {
+    productLine: 'youbao',
+    routeKey: 'project-customization',
+    menuTitle: '项目定制',
+    summary: '对特定用户配置差异化结算比例；定制结算单价 = 普通单价 × (1 + 定制比例%)。',
+    paragraphs: [
+      {
+        subheading: '使用说明',
+        body: '定制比例仅对指定用户生效，不影响其他用户的结算逻辑。\n新增/编辑定制后需刷新缓存方可生效，建议操作后观察次日收益数据。',
+      },
+    ],
+  },
+  {
     productLine: 'youboom',
     routeKey: 'reward-management',
     menuTitle: '奖励管理',

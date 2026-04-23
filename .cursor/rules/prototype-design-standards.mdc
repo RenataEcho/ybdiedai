@@ -136,3 +136,65 @@ const Icon = getPlaceholderIcon(prototype.id);
 ```
 
 图标颜色统一使用蓝紫渐变背景 + 白色图标，与整体科技感保持一致。
+
+## 6. 移动端（H5）原型 HTML 结构规范 ⚠️ 必须遵守
+
+移动端原型会被嵌入 `UserPrototypePage` 的 iPhone 外壳 iframe 中展示。**严禁**在 HTML 里包含任何演示用的外层包装结构。
+
+### ❌ 禁止的结构
+
+```html
+<!-- ❌ BAD — 外层演示控制器会与系统 iPhone 壳冲突，导致布局错乱 -->
+<body>
+  <div class="sw-label">👆 点击切换审核状态预览</div>
+  <div class="switcher-bar">
+    <button class="sw-btn active">待提交</button>
+    <button class="sw-btn">审核中</button>
+  </div>
+  <div class="phone">
+    <!-- 原型自带手机壳 -->
+    <div class="status-bar">...</div>
+    <div class="content">...</div>
+  </div>
+</body>
+
+<!-- ❌ BAD — 原型 HTML 里自带手机壳外框 -->
+<div class="phone" style="border-radius:44px; box-shadow:...">
+```
+
+### ✅ 正确的结构
+
+```html
+<!-- ✅ GOOD — body 直接是页面内容，无外层演示控制器，无自带手机壳 -->
+<body>
+  <!-- 直接是 H5 页面本体，body 就是手机屏幕 -->
+  <div class="hero">...</div>
+  <div class="form-wrap">...</div>
+  <div class="footer-fixed">
+    <button>提交绑定</button>
+  </div>
+</body>
+```
+
+### 多状态切换的正确做法
+
+如果原型需要展示多个审核状态，用**页面内浮动按钮组**实现，而不是 body 外层的 `.switcher-bar`：
+
+```html
+<!-- ✅ GOOD — 浮动在页面内部的状态切换栏，不影响外层布局 -->
+<div style="position:fixed;top:8px;left:0;right:0;z-index:999;display:flex;justify-content:center;gap:6px;padding:0 12px;flex-wrap:wrap;">
+  <button onclick="switchState('idle')" style="...">待提交</button>
+  <button onclick="switchState('reviewing')" style="...">审核中</button>
+  <button onclick="switchState('approved')" style="...">已通过</button>
+</div>
+<div style="padding-top:48px;">
+  <!-- 页面主体内容 -->
+</div>
+```
+
+### 核心原则
+
+- `body` 的 `background` 就是手机屏幕背景色
+- `body` 不要设置 `display:flex + align-items:center + justify-content:center`（会把内容居中显示在屏幕正中，看起来像 PC 页面）
+- 不要在 HTML 里渲染手机外壳（圆角边框、状态栏、灵动岛等），这些由 `UserPrototypePage` 的 `IPhoneShell` 组件负责
+- 整个 HTML 页面宽度默认适配 390px（iPhone 16 Pro 宽度）

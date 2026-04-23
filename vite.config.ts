@@ -201,9 +201,9 @@ setTimeout(() => { window.location.href = '/'; }, 2000);
 }
 
 /**
- * 原型设计队列：浏览器提交需求 → 写入 prototype-queue.json → Cursor 读取并实现 → 写回结果
- * POST /__dev/api/prototype-queue/push   — 新增一条请求
- * POST /__dev/api/prototype-queue/result — Cursor 写回 HTML 结果
+ * 原型设计队列：浏览器提交需求 → 写入 prototype-queue.json → 自动调用 Gemini API 生成 HTML → 写回结果
+ * POST /__dev/api/prototype-queue/push   — 新增一条请求（自动触发 AI 生成）
+ * POST /__dev/api/prototype-queue/result — 写回 HTML 结果
  * GET  /__dev/api/prototype-queue        — 读取当前队列
  */
 function prototypeQueuePlugin(): Plugin {
@@ -221,9 +221,123 @@ function prototypeQueuePlugin(): Plugin {
     fs.writeFileSync(queuePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
   }
 
+  /** 调用 Gemini API 生成原型 HTML，完成后直接写回队列 */
+  async function generatePrototypeWithGemini(item: Record<string, unknown>, apiKey: string): Promise<void> {
+    const id = item.id as string;
+    const requirement = item.requirement as string;
+    const designMode = item.designMode as string | undefined;
+    const isMobile = designMode === 'mobile';
+
+    const mobileNote = isMobile ? `
+【移动端 H5 特别规范】
+- body 直接是页面内容，不要有外层演示包装结构（如 .phone、.switcher-bar 等）
+- body 不要设置 display:flex + align-items:center（避免内容居中像 PC 页面）
+- 整个页面宽度适配 390px（iPhone 16 Pro 宽度）
+- 不要在 HTML 里渲染手机外壳（由外层系统组件负责）
+- 如需展示多个审核状态，用页面内 position:fixed 浮动按钮组，而不是 body 外层的控制栏` : '';
+
+    const prompt = `你是一个专业的前端 UI 设计师，请根据以下需求描述，生成一个完整的、可直接预览的 HTML 原型页面。
+
+【需求描述】
+${requirement}
+
+【技术要求】
+1. 使用 Tailwind CSS（通过 CDN 引入：<script src="https://cdn.tailwindcss.com"></script>）
+2. 样式风格：玻璃拟态风格，半透明卡片 + backdrop-blur + 微边框，科技感设计
+3. 主色调：蓝紫渐变（#6366f1 → #8b5cf6）
+4. 主题自适应：通过 CSS prefers-color-scheme 自动跟随用户系统亮/暗色主题，使用 CSS 变量：
+   - :root { --bg: #f8fafc; --bg-card: rgba(255,255,255,0.8); --text: #1e293b; --text-sub: #64748b; --border: rgba(0,0,0,0.08); }
+   - @media (prefers-color-scheme: dark) { :root { --bg: #0f1117; --bg-card: rgba(255,255,255,0.05); --text: rgba(255,255,255,0.85); --text-sub: rgba(255,255,255,0.45); --border: rgba(255,255,255,0.08); } }
+5. 使用 Mock 数据填充页面，数据要真实合理
+6. 页面要有完整的交互（按钮点击、表单提交、弹窗、搜索过滤等用 JavaScript 实现）
+7. 代码精简，CSS/JS 内联在 HTML 里（不引入外部 JS 库，只用 Tailwind CDN）${mobileNote}
+
+【输出要求】
+只输出完整的 HTML 代码，不要任何解释文字，不要 markdown 代码块标记，直接从 <!DOCTYPE html> 开始。`;
+
+    if (!apiKey || apiKey === 'YOUR_KEY_HERE' || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+      console.error('[prototype-queue] ❌ 未配置有效的 VITE_GEMINI_API_KEY，无法生成原型。请在 .env 中配置。');
+      // 标记为失败状态，前端会看到错误提示
+      const queueErr = readQueue() as Array<Record<string, unknown>>;
+      const errIdx = queueErr.findIndex((q) => q.id === id);
+      if (errIdx !== -1) {
+        queueErr[errIdx] = { ...queueErr[errIdx], status: 'error', html: null, updatedAt: Date.now() };
+        writeQueue(queueErr);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`[prototype-queue] Gemini API error for ${id}:`, response.status, errText);
+        const qe = readQueue() as Array<Record<string, unknown>>;
+        const ei = qe.findIndex((q) => q.id === id);
+        if (ei !== -1) { qe[ei] = { ...qe[ei], status: 'error', updatedAt: Date.now() }; writeQueue(qe); }
+        return;
+      }
+
+      const data = await response.json() as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+
+      let html = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+      // 清理可能的 markdown 代码块包装
+      html = html.trim();
+      if (html.startsWith('```html')) html = html.slice(7);
+      else if (html.startsWith('```')) html = html.slice(3);
+      if (html.endsWith('```')) html = html.slice(0, -3);
+      html = html.trim();
+
+      if (!html || !html.includes('<!DOCTYPE')) {
+        console.error(`[prototype-queue] Gemini returned invalid HTML for ${id}`);
+        const qe2 = readQueue() as Array<Record<string, unknown>>;
+        const ei2 = qe2.findIndex((q) => q.id === id);
+        if (ei2 !== -1) { qe2[ei2] = { ...qe2[ei2], status: 'error', updatedAt: Date.now() }; writeQueue(qe2); }
+        return;
+      }
+
+      // 写回队列
+      const queue = readQueue() as Array<Record<string, unknown>>;
+      const idx = queue.findIndex((q) => q.id === id);
+      if (idx !== -1) {
+        queue[idx] = { ...queue[idx], status: 'done', html, updatedAt: Date.now() };
+        writeQueue(queue);
+        console.log(`[prototype-queue] ✅ AI 已生成原型: ${id}`);
+      }
+    } catch (e) {
+      console.error(`[prototype-queue] 调用 Gemini API 失败 (${id}):`, e);
+      const qe3 = readQueue() as Array<Record<string, unknown>>;
+      const ei3 = qe3.findIndex((q) => q.id === id);
+      if (ei3 !== -1) { qe3[ei3] = { ...qe3[ei3], status: 'error', updatedAt: Date.now() }; writeQueue(qe3); }
+    }
+  }
+
   return {
     name: 'prototype-queue',
     configureServer(server) {
+      // 读取 .env 中的 Gemini API Key
+      const envPath = path.resolve(__dirname, '.env');
+      let geminiApiKey = '';
+      try {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        const match = envContent.match(/VITE_GEMINI_API_KEY\s*=\s*(.+)/);
+        if (match) geminiApiKey = match[1].trim().replace(/^["']|["']$/g, '');
+      } catch { /* .env 不存在时忽略 */ }
+
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0];
         res.setHeader('Content-Type', 'application/json');
@@ -235,7 +349,7 @@ function prototypeQueuePlugin(): Plugin {
           return;
         }
 
-        // POST push — 新增需求
+        // POST push — 新增需求，自动触发 AI 生成
         if (req.method === 'POST' && url === '/__dev/api/prototype-queue/push') {
           let body = '';
           req.on('data', (c: Buffer | string) => { body += typeof c === 'string' ? c : c.toString(); });
@@ -252,6 +366,16 @@ function prototypeQueuePlugin(): Plugin {
               writeQueue(queue);
               res.statusCode = 200;
               res.end(JSON.stringify({ ok: true }));
+
+              // 异步触发 AI 生成（不阻塞响应）
+              const isExisting = item.requirementType === 'existing-feature';
+              if (!isExisting) {
+                // 新功能菜单需求：调用 Gemini API 生成 HTML 原型
+                generatePrototypeWithGemini(item, geminiApiKey).catch((e) => {
+                  console.error('[prototype-queue] generatePrototypeWithGemini error:', e);
+                });
+              }
+              // existing-feature 类型：不在此处处理，由 Cursor AI 修改源文件后手动调用 /result 接口
             } catch (e) {
               res.statusCode = 500;
               res.end(JSON.stringify({ ok: false, error: String(e) }));
@@ -497,10 +621,66 @@ function savePageRuleOverridesPlugin(): Plugin {
               }
               if (entry.menuTitle !== undefined || entry.paragraphs !== undefined) cleaned[k] = entry;
             }
-            fs.writeFileSync(outPath, `${JSON.stringify(cleaned, null, 2)}\n`, 'utf8');
+            // 读取文件现有内容，与新数据深度合并（保留文件中已有但本次未传入的条目）
+            let existing: Record<string, unknown> = {};
+            try {
+              if (fs.existsSync(outPath)) {
+                existing = JSON.parse(fs.readFileSync(outPath, 'utf8') || '{}');
+              }
+            } catch {
+              existing = {};
+            }
+            const merged = { ...existing, ...cleaned };
+            fs.writeFileSync(outPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ ok: true, keys: Object.keys(cleaned) }));
+            res.end(JSON.stringify({ ok: true, keys: Object.keys(merged) }));
+          } catch (e) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: String(e) }));
+          }
+        });
+      });
+    },
+  };
+}
+
+/** 开发时把已保存原型写入 src/mock/saved-prototypes-seed.json，防止 localStorage 清空丢失数据 */
+function savePrototypeSeedsPlugin(): Plugin {
+  const apiPath = '/__dev/api/save-prototype-seeds';
+  return {
+    name: 'save-prototype-seeds',
+    configureServer(server) {
+      const outPath = path.resolve(__dirname, 'src/mock/saved-prototypes-seed.json');
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0];
+        if (req.method !== 'POST' || url !== apiPath) {
+          next();
+          return;
+        }
+        let body = '';
+        req.on('data', (chunk: Buffer | string) => {
+          body += typeof chunk === 'string' ? chunk : chunk.toString();
+        });
+        req.on('end', () => {
+          try {
+            const parsed = JSON.parse(body || '{}') as { prototypes?: unknown };
+            const prototypes = parsed?.prototypes;
+            if (!Array.isArray(prototypes)) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'invalid prototypes' }));
+              return;
+            }
+            // 只持久化 mobile 设计模式且有 menuPath 的条目（即「用户端原型」）
+            const toSave = (prototypes as Record<string, unknown>[]).filter(
+              (p) => p.menuPath && (p.designMode === 'mobile' || p.designMode == null)
+            );
+            fs.writeFileSync(outPath, `${JSON.stringify(toSave, null, 2)}\n`, 'utf8');
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, count: toSave.length }));
           } catch (e) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -524,7 +704,7 @@ export default defineConfig(({mode}) => {
       : '/';
   return {
     base,
-    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin(), prototypeQueuePlugin(), uploadImagePlugin()],
+    plugins: [react(), tailwindcss(), saveFieldConfigDescriptionsPlugin(), savePageRuleOverridesPlugin(), saveWorkspaceSnapshotPlugin(), prototypeQueuePlugin(), uploadImagePlugin(), savePrototypeSeedsPlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

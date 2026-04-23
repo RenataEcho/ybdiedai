@@ -1,7 +1,7 @@
-import { useState, useRef, useMemo, type ChangeEvent } from 'react';
+import { useState, useRef, useMemo, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Pagination } from './Pagination';
 import { useResizableTableColumns, ColumnTipHeader } from './resizableTableColumns';
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Edit2, ImagePlus, Search, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Edit2, ImagePlus, Plus, Search, Trash2, X } from 'lucide-react';
 import type { SectGuildFormState, SectGuildProjectItem, SectGuildRow, SectGuildStatus, SectIntroBlock, SectIntroTabKey } from './sectGuildModel';
 import { SECT_GUILD_STATUS_LABEL, SECT_INTRO_TAB_KEYS, SECT_INTRO_TAB_LABEL } from './sectGuildModel';
 import { RichTextEditor } from './RichTextEditor';
@@ -12,7 +12,7 @@ const SECT_GUILD_COL_DEFAULTS = [160, 120, 100, 160, 100, 100, 100, 120, 100, 16
 const MT_FIELD_TIPS: Record<string, string> = {
   name: '门派在列表与详情页中的对外展示名称',
   leader: '门派负责人或对外展示的掌门昵称',
-  tags: '用于筛选和分类的自由标签，多个标签可用逗号分隔',
+  tags: '用于筛选和分类的标签，最多添加 1 个',
   status: '门派启用/停用状态，停用后前台不可访问该门派',
   totalEarnings: '演示用汇总指标，实际口径以后台数仓为准（元）',
 };
@@ -430,6 +430,78 @@ export function SectGuildTable({
   );
 }
 
+function SingleTagField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [input, setInput] = useState('');
+  const hasTag = value.trim() !== '';
+
+  const addTag = () => {
+    const tag = input.trim();
+    if (!tag || hasTag) return;
+    onChange(tag);
+    setInput('');
+  };
+
+  const removeTag = () => {
+    onChange('');
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-gray-700">标签</label>
+      <div className="flex flex-wrap items-center gap-2 min-h-[38px] rounded-lg border border-line px-3 py-1.5 bg-white focus-within:ring-2 focus-within:ring-accent/20">
+        {hasTag && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+            {value}
+            <button
+              type="button"
+              onClick={removeTag}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-accent/20 transition-colors"
+              aria-label="移除标签"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        )}
+        {!hasTag && (
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="输入标签后回车添加"
+            className="min-w-[140px] flex-1 bg-transparent text-sm outline-none"
+          />
+        )}
+        {!hasTag && (
+          <button
+            type="button"
+            onClick={addTag}
+            disabled={!input.trim()}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            添加
+          </button>
+        )}
+      </div>
+      <p className="text-[10px] text-gray-400">最多添加 1 个标签</p>
+    </div>
+  );
+}
+
 function SectIconUploadField({
   value,
   onChange,
@@ -533,14 +605,15 @@ export function SectGuildDrawerFields({
         value={form.iconUrl}
         onChange={(url) => onPatch({ iconUrl: url })}
       />
+      <SingleTagField value={form.tags} onChange={(v) => onPatch({ tags: v })} />
+
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">标签</label>
-        <input
-          type="text"
-          className={inputClass}
-          value={form.tags}
-          onChange={(e) => onPatch({ tags: e.target.value })}
-          placeholder="请输入标签，多个标签可用逗号分隔"
+        <label className="text-sm font-medium text-gray-700">公告</label>
+        <textarea
+          className={`${inputClass} min-h-[80px] resize-y`}
+          value={form.announcement}
+          onChange={(e) => onPatch({ announcement: e.target.value })}
+          placeholder="请输入门派公告内容（选填）"
         />
       </div>
 

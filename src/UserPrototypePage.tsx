@@ -2,19 +2,38 @@
  * 用户端需求原型 —— 展示各业务线下已加入菜单的移动端（H5）设计原型
  * 样式：历史记录列表 + iPhone 16 Pro 外框实时预览
  */
-import { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Smartphone, Monitor, Clock, Layers, Zap, Globe,
   Rocket, TrendingUp, Users, GraduationCap, Cpu, Bot,
-  ChevronRight, ExternalLink,
+  ChevronRight, ExternalLink, LayoutDashboard, Copy, Check, BookOpen,
 } from 'lucide-react';
 import {
   loadPrototypes,
+  savePrototypes,
   type SavedPrototype,
   type PrototypeProductLine,
   PRODUCT_LINE_LABEL,
 } from './savedPrototypesModel';
+import { MenuRuleDescriptionModal, NavRuleHintButton } from './MenuRuleDescriptionModal';
+
+// ─── 工具函数：从 HTML 自动提取 switchState 状态标签 ─────────────────────────
+
+function detectStateLabels(html: string): { key: string; label: string }[] {
+  if (!html) return [];
+  const results: { key: string; label: string }[] = [];
+  const btnRegex = /onclick=["']switchState\(['"]([^'"]+)['"]\)["'][^>]*>([^<]+)<\/button>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = btnRegex.exec(html)) !== null) {
+    const key = m[1].trim();
+    const label = m[2].trim();
+    if (key && label && !results.find((r) => r.key === key)) {
+      results.push({ key, label });
+    }
+  }
+  return results;
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,26 +69,86 @@ type Props = {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UserPrototypePage({ productLine }: Props) {
-  const all = useMemo(() => loadPrototypes(), []);
+  const [mobileProtos, setMobileProtos] = useState<SavedPrototype[]>([]);
 
-  // 过滤：当前业务线 + 移动端设计 + 已加入菜单（有 menuPath）
-  const mobileProtos = useMemo(
-    () =>
-      all
-        .filter(
-          (p) =>
-            p.productLine === productLine &&
-            p.designMode === 'mobile' &&
-            !!p.menuPath,
-        )
-        .sort((a, b) => b.createdAt - a.createdAt),
-    [all, productLine],
-  );
+  useEffect(() => {
+    const all = loadPrototypes();
+    const filtered = all
+      .filter(
+        (p) =>
+          p.productLine === productLine &&
+          (p.designMode === 'mobile' || p.designMode == null) &&
+          !!p.menuPath,
+      )
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map((p) => {
+        // 对旧数据自动检测状态标签（未保存 stateLabels 时从 HTML 解析）
+        if (!p.stateLabels || p.stateLabels.length === 0) {
+          const detected = detectStateLabels(p.html ?? '');
+          if (detected.length > 0) {
+            return { ...p, stateLabels: detected };
+          }
+        }
+        return p;
+      });
+    setMobileProtos(filtered);
+  }, [productLine]);
 
   const [selected, setSelected] = useState<SavedPrototype | null>(null);
+  const [activeStateKey, setActiveStateKey] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // 规则说明弹窗
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+
+  // 复制 HTML 状态
+  const [copied, setCopied] = useState(false);
 
   const activeProto = selected ?? mobileProtos[0] ?? null;
   const color = COLORS[productLine];
+
+  const handleCopyHtml = useCallback(() => {
+    const html = (selected ?? mobileProtos[0] ?? null)?.html;
+    if (!html) return;
+    navigator.clipboard.writeText(html).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = html;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [selected, mobileProtos]);
+
+  // 切换原型时重置状态选择
+  useEffect(() => {
+    setActiveStateKey(null);
+  }, [activeProto?.id]);
+
+  // 通过 postMessage 调用 iframe 内的 switchState（sandbox 无 allow-same-origin，不能直接访问 contentWindow 全局变量）
+  const callIframeSwitchState = useCallback((key: string) => {
+    try {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'SWITCH_STATE', key }, '*');
+    } catch {
+      // 忽略
+    }
+  }, [iframeRef]);
+
+  const handleSwitchState = useCallback((key: string) => {
+    setActiveStateKey(key);
+    callIframeSwitchState(key);
+  }, [callIframeSwitchState]);
+
+  // iframe 加载完成后，自动应用当前选中的状态
+  const handleIframeLoad = useCallback(() => {
+    const key = activeStateKey ?? activeProto?.stateLabels?.[0]?.key;
+    if (key) callIframeSwitchState(key);
+  }, [activeStateKey, activeProto, callIframeSwitchState]);
 
   // ── 空态 ──
   if (mobileProtos.length === 0) {
@@ -122,7 +201,7 @@ export default function UserPrototypePage({ productLine }: Props) {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.2, delay: idx * 0.04 }}
-              onClick={() => setSelected(proto)}
+              onClick={() => setSelected(proto)}  // proto 已是带 stateLabels 的最新版本
               className={`group flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-all shrink-0 ${
                 isActive
                   ? 'border-sky-400/40 bg-sky-500/6 shadow-sm'
@@ -155,10 +234,24 @@ export default function UserPrototypePage({ productLine }: Props) {
                     {proto.menuPath}
                   </p>
                 )}
-                <p className="text-[10px] text-gray-400 dark:text-white/25 mt-1 flex items-center gap-1">
-                  <Clock className="w-2.5 h-2.5 shrink-0" />
-                  {formatDate(proto.createdAt)}
-                </p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <p className="text-[10px] text-gray-400 dark:text-white/25 flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 shrink-0" />
+                    {formatDate(proto.createdAt)}
+                  </p>
+                  {proto.stateLabels && proto.stateLabels.length > 0 && (
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-full font-medium border"
+                      style={
+                        isActive
+                          ? { background: `${color}18`, borderColor: `${color}30`, color }
+                          : { background: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.08)', color: '#94a3b8' }
+                      }
+                    >
+                      {proto.stateLabels.length} 个状态
+                    </span>
+                  )}
+                </div>
               </div>
 
               {isActive && (
@@ -176,6 +269,15 @@ export default function UserPrototypePage({ productLine }: Props) {
             {/* 顶部工具栏 */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-line bg-gray-50 dark:bg-white/3 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
+                {/* 规则说明按钮 */}
+                <button
+                  type="button"
+                  onClick={() => setRuleModalOpen(true)}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-line text-gray-500 hover:bg-gray-100 dark:hover:bg-white/8 hover:text-accent hover:border-accent/30 transition-colors cursor-pointer shrink-0"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  规则说明
+                </button>
                 <div
                   className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                   style={{ background: `${color}18` }}
@@ -195,27 +297,90 @@ export default function UserPrototypePage({ productLine }: Props) {
                   iPhone 16 Pro
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const w = window.open('', '_blank');
-                  if (w) {
-                    w.document.write(activeProto.html);
-                    w.document.close();
-                  }
-                }}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-500 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer shrink-0"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                新窗口打开
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* 复制 HTML */}
+                <button
+                  type="button"
+                  onClick={handleCopyHtml}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                    copied
+                      ? 'border-green-400/40 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400'
+                      : 'border-line text-gray-500 hover:bg-gray-100 dark:hover:bg-white/8'
+                  }`}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? '已复制' : '复制 HTML'}
+                </button>
+                {/* 新窗口打开 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const w = window.open('', '_blank');
+                    if (w) {
+                      w.document.write(activeProto.html);
+                      w.document.close();
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-500 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  新窗口打开
+                </button>
+              </div>
             </div>
 
             {/* iPhone 预览区 */}
             <div
-              className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+              className="flex-1 min-h-0 flex items-center justify-center overflow-hidden relative"
               style={{ background: 'linear-gradient(135deg,#f0f4ff 0%,#e8f4f8 50%,#f4f0ff 100%)' }}
             >
+              {/* 左侧状态切换面板（有 stateLabels 时显示） */}
+              {activeProto.stateLabels && activeProto.stateLabels.length > 0 && (
+                <div
+                  className="absolute left-5 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10"
+                  style={{ maxWidth: 120 }}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <LayoutDashboard className="w-3 h-3 text-gray-400 dark:text-white/30" />
+                    <span className="text-[10px] font-semibold text-gray-400 dark:text-white/30 uppercase tracking-wide">
+                      审核状态
+                    </span>
+                  </div>
+                  {activeProto.stateLabels.map((s) => {
+                    const isStateActive = activeStateKey === s.key || (activeStateKey === null && activeProto.stateLabels![0].key === s.key);
+                    return (
+                      <motion.button
+                        key={s.key}
+                        type="button"
+                        onClick={() => handleSwitchState(s.key)}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="text-left px-3 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer"
+                        style={
+                          isStateActive
+                            ? {
+                                background: `linear-gradient(135deg,${color},#8b5cf6)`,
+                                borderColor: 'transparent',
+                                color: '#fff',
+                                boxShadow: `0 4px 12px ${color}40`,
+                              }
+                            : {
+                                background: 'rgba(255,255,255,0.7)',
+                                borderColor: 'rgba(0,0,0,0.08)',
+                                color: '#64748b',
+                                backdropFilter: 'blur(8px)',
+                              }
+                        }
+                      >
+                        {s.label}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
+
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeProto.id}
@@ -226,7 +391,7 @@ export default function UserPrototypePage({ productLine }: Props) {
                   style={{ flexShrink: 0 }}
                 >
                   {/* 手机壳外框 */}
-                  <IPhoneShell html={activeProto.html} name={activeProto.name} />
+                  <IPhoneShell html={activeProto.html} name={activeProto.name} iframeRef={iframeRef} onIframeLoad={handleIframeLoad} />
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -237,13 +402,76 @@ export default function UserPrototypePage({ productLine }: Props) {
           </div>
         )}
       </div>
+
+      {/* 规则说明弹窗：以原型 id 为 routeKey，支持按原型独立编辑 */}
+      {activeProto && (
+        <MenuRuleDescriptionModal
+          open={ruleModalOpen}
+          navTitle={activeProto.name}
+          routeKeys={[activeProto.id]}
+          onClose={() => setRuleModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 // ─── iPhone Shell Component ───────────────────────────────────────────────────
 
-function IPhoneShell({ html, name }: { html: string; name?: string }) {
+/**
+ * 注入 CSS，修复移动端原型 HTML 嵌入 iPhone 外壳 iframe 时的布局问题：
+ * 1. 隐藏原型自带的演示控制器（切换状态按钮栏、标签说明文字）
+ * 2. 隐藏原型自带的手机壳外框（.phone 类）的装饰样式，让其内容铺满 iframe
+ * 3. 修正 body 居中布局（避免内容悬浮在屏幕中央）
+ */
+function injectIframeResetCss(html: string): string {
+  const injected = `<style>
+    /* 隐藏演示控制器 */
+    .switcher-bar, .sw-label, .sw-btn,
+    [class*="switcher"], [class*="sw-label"],
+    [class*="demo-bar"], [class*="preview-bar"] {
+      display: none !important;
+    }
+    /* 修正 body 布局，铺满 iframe */
+    body {
+      padding: 0 !important;
+      margin: 0 !important;
+      display: block !important;
+      align-items: unset !important;
+      justify-content: unset !important;
+      min-height: 100vh !important;
+    }
+    /* 如果原型有自带手机壳（.phone），去掉其装饰，铺满屏幕 */
+    .phone {
+      width: 100% !important;
+      min-height: 100vh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    /* 隐藏原型自带的状态栏（手机壳内的模拟状态栏） */
+    .status-bar, .sb-time, .sb-icons { display: none !important; }
+  </style>
+  <script>
+    /* 监听父页面通过 postMessage 发来的状态切换指令 */
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'SWITCH_STATE' && typeof window.switchState === 'function') {
+        window.switchState(e.data.key);
+      }
+    });
+  </script>`;
+  if (html.includes('</head>')) return html.replace('</head>', injected + '</head>');
+  if (html.includes('<body')) return html.replace(/<body(\s[^>]*)?>/, (m) => injected + m);
+  return injected + html;
+}
+
+function IPhoneShell({ html, name, iframeRef, onIframeLoad }: {
+  html: string;
+  name?: string;
+  iframeRef?: React.RefObject<HTMLIFrameElement | null>;
+  onIframeLoad?: () => void;
+}) {
   // 根据容器高度自动缩放，最大不超过原始尺寸
   const SHELL_W = IPHONE16PRO_W + 28;
   const SHELL_H = IPHONE16PRO_H + 60;
@@ -325,15 +553,17 @@ function IPhoneShell({ html, name }: { html: string; name?: string }) {
             }}
           >
             <iframe
+              ref={iframeRef}
               title={name ?? 'H5 原型预览'}
-              srcDoc={html}
+              srcDoc={injectIframeResetCss(html)}
+              onLoad={onIframeLoad}
               style={{
                 width: IPHONE16PRO_W,
                 height: IPHONE16PRO_H,
                 border: 'none',
                 display: 'block',
               }}
-              sandbox="allow-scripts allow-same-origin"
+              sandbox="allow-scripts"
             />
           </div>
 

@@ -44,7 +44,7 @@ export const STORAGE_KEYS = {
   customerService: 'ybdiedai-customer-service-v1',
   youboomTeam: 'ybdiedai-youboom-team-v1',
   academyCategories: 'ybdiedai-academy-categories-v1',
-  academyContents: 'ybdiedai-academy-contents-v1',
+  academyContents: 'ybdiedai-academy-contents-v2',
 } as const;
 
 /** 与历史代码、控制台同步 snippet 兼容 */

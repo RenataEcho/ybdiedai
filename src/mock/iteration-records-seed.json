@@ -607,5 +607,27 @@
     "releaseTime": "",
     "notesHtml": "<p><br>现在后台的关键词、订单查询和打款都比较慢,且目前数据量还不庞大;看下方案是否要将服务器由上海迁移到深圳</p>",
     "createdAt": "2026-04-21T08:56:12.312Z"
+  },
+  {
+    "id": "ir-1776936967162",
+    "scope": "youbao",
+    "parentRequirement": "项目定制(跟随改版需求一起上)",
+    "priority": "SS",
+    "version": "",
+    "subRequirements": [],
+    "parentProductOwnerIds": [
+      "ps-1"
+    ],
+    "parentAssigneeIds": [
+      "ps-3",
+      "ps-4"
+    ],
+    "parentDateStart": "2026-04-27",
+    "parentDateEnd": "2026-04-30",
+    "detailRulesHtml": "<p>项目定制:部分用户部分品牌类项目的单价或者结算比例需要比正常单价高一些,故对这部份用户进行项目定制</p><p>1、目前仅对品牌类项目生效</p><p>2、在品牌项目产生订单时需要查询该表:</p><p>2.1、用户ID是否存在且状态为启用(yes)➡️该订单项目是否分配且启用➡️查询出该项目的结算比例➡️再计算单价</p><p>2.2、定制项目的实际结算单价/比例=基础结算单价比例*(1+结算比例)</p><p>2.3、表里配置的结算比例即为基础单价的增长结算比例</p>",
+    "status": "pending",
+    "releaseTime": "",
+    "notesHtml": "<p></p>",
+    "createdAt": "2026-04-23T09:36:07.162Z"
   }
 ]

@@ -42,7 +42,7 @@ type QueueItem = {
   targetMenuKeys?: string[];
   /** 已有功能需求：对应的实际源文件路径列表（供 Cursor AI 直接修改） */
   sourceFiles?: string[];
-  status: 'pending' | 'done' | 'reverted';
+  status: 'pending' | 'done' | 'reverted' | 'error';
   html: string | null;
   createdAt: number;
   updatedAt: number;
@@ -255,6 +255,28 @@ function computeWorkflowStep(messages: ChatMsg[]): number {
   return 1;
 }
 
+// ─── 工具函数：从 HTML 中自动提取状态切换标签 ─────────────────────────────────
+
+/**
+ * 从原型 HTML 中解析 sw-btn 按钮和 switchState() 调用，提取状态标签列表。
+ * 匹配格式：<button ... onclick="switchState('key')">label</button>
+ */
+function detectStateLabels(html: string): { key: string; label: string }[] {
+  if (!html) return [];
+  const results: { key: string; label: string }[] = [];
+  // 匹配 onclick="switchState('xxx')" 或 onclick="switchState(\"xxx\")"
+  const btnRegex = /onclick=["']switchState\(['"]([^'"]+)['"]\)["'][^>]*>([^<]+)<\/button>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = btnRegex.exec(html)) !== null) {
+    const key = m[1].trim();
+    const label = m[2].trim();
+    if (key && label && !results.find((r) => r.key === key)) {
+      results.push({ key, label });
+    }
+  }
+  return results;
+}
+
 // ─── 加入菜单弹窗 ──────────────────────────────────────────────────────────────
 
 function AddToMenuModal({
@@ -267,7 +289,7 @@ function AddToMenuModal({
   msg: ChatMsg;
   color: string;
   productLine: PrototypeProductLine;
-  onConfirm: (menuPath: string) => void;
+  onConfirm: (menuPath: string, stateLabels: { key: string; label: string }[]) => void;
   onCancel: () => void;
 }) {
   // 用菜单 label（而非 key）作为默认路径
@@ -279,9 +301,32 @@ function AddToMenuModal({
   const [menuPath, setMenuPath] = useState(defaultPath);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 自动从 HTML 检测状态标签
+  const detectedLabels = useMemo(() => detectStateLabels(msg.html ?? ''), [msg.html]);
+  const [stateLabels, setStateLabels] = useState<{ key: string; label: string }[]>(detectedLabels);
+  const [newStateKey, setNewStateKey] = useState('');
+  const [newStateLabel, setNewStateLabel] = useState('');
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const isMobile = msg.designMode === 'mobile';
+  const hasStates = isMobile && stateLabels.length > 0;
+
+  function addStateLabel() {
+    const k = newStateKey.trim();
+    const l = newStateLabel.trim();
+    if (!k || !l) return;
+    if (stateLabels.find((s) => s.key === k)) return;
+    setStateLabels((prev) => [...prev, { key: k, label: l }]);
+    setNewStateKey('');
+    setNewStateLabel('');
+  }
+
+  function removeStateLabel(key: string) {
+    setStateLabels((prev) => prev.filter((s) => s.key !== key));
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -322,7 +367,7 @@ function AddToMenuModal({
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 space-y-4">
+        <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* 原型名称预览 */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/4">
             <Monitor className="w-3.5 h-3.5 text-gray-400 dark:text-white/30 shrink-0" />
@@ -341,7 +386,6 @@ function AddToMenuModal({
               value={menuPath}
               onChange={(e) => setMenuPath(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && menuPath.trim()) onConfirm(menuPath.trim());
                 if (e.key === 'Escape') onCancel();
               }}
               placeholder="例如：右豹迭代 / 榜单数据 / 积分榜"
@@ -351,6 +395,89 @@ function AddToMenuModal({
               用「/」分隔层级，例如：产品线 / 模块 / 功能名
             </p>
           </div>
+
+          {/* 审核状态切换配置（仅移动端原型显示） */}
+          {isMobile && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-gray-600 dark:text-white/50 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5" />
+                  审核状态切换
+                  <span className="text-[10px] text-gray-400 dark:text-white/25 font-normal">（可选）</span>
+                </label>
+                {detectedLabels.length > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    已自动检测 {detectedLabels.length} 个
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-gray-400 dark:text-white/25 mb-2">
+                配置后可在预览页左侧快速切换不同审核状态的展示效果
+              </p>
+
+              {/* 已有状态标签列表 */}
+              {stateLabels.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {stateLabels.map((s) => (
+                    <div
+                      key={s.key}
+                      className="flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px] font-medium border"
+                      style={{
+                        background: `${color}10`,
+                        borderColor: `${color}30`,
+                        color,
+                      }}
+                    >
+                      <span>{s.label}</span>
+                      <span className="text-[9px] opacity-50 mx-0.5">·</span>
+                      <span className="text-[9px] opacity-40 font-mono">{s.key}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeStateLabel(s.key)}
+                        className="w-3.5 h-3.5 rounded-full flex items-center justify-center hover:bg-red-500/20 transition-colors cursor-pointer ml-0.5"
+                        style={{ color: 'inherit' }}
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 手动添加状态 */}
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={newStateKey}
+                  onChange={(e) => setNewStateKey(e.target.value)}
+                  placeholder="状态key（如 idle）"
+                  className="flex-1 min-w-0 text-[11px] rounded-lg border border-line bg-gray-50 dark:bg-white/4 px-2 py-1.5 text-ink placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:border-accent/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter') addStateLabel(); }}
+                />
+                <input
+                  type="text"
+                  value={newStateLabel}
+                  onChange={(e) => setNewStateLabel(e.target.value)}
+                  placeholder="显示名称（如 待提交）"
+                  className="flex-1 min-w-0 text-[11px] rounded-lg border border-line bg-gray-50 dark:bg-white/4 px-2 py-1.5 text-ink placeholder-gray-400 dark:placeholder-white/20 focus:outline-none focus:border-accent/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter') addStateLabel(); }}
+                />
+                <button
+                  type="button"
+                  onClick={addStateLabel}
+                  disabled={!newStateKey.trim() || !newStateLabel.trim()}
+                  className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border border-line text-gray-400 hover:text-gray-700 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {!hasStates && stateLabels.length === 0 && (
+                <p className="mt-1.5 text-[10px] text-gray-400 dark:text-white/25">
+                  未配置时不显示状态切换面板
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -365,7 +492,7 @@ function AddToMenuModal({
           <button
             type="button"
             onClick={() => {
-              if (menuPath.trim()) onConfirm(menuPath.trim());
+              if (menuPath.trim()) onConfirm(menuPath.trim(), stateLabels);
             }}
             disabled={!menuPath.trim()}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -535,13 +662,21 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
   // 已有功能需求：用户在对话框顶部选中的菜单 key 列表
   const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]);
   const [addToMenuMsg, setAddToMenuMsg] = useState<ChatMsg | null>(null);
+  // 广场生成记录：所有产品线的完整队列
+  const [allQueue, setAllQueue] = useState<QueueItem[]>([]);
 
   const currentStep = useMemo(() => computeWorkflowStep(messages), [messages]);
   const color = COLORS[productLine];
 
-  // Restore pending + done items from queue on mount
+  // Restore pending + done items from queue on mount, also populate allQueue
   useEffect(() => {
     fetchQueue().then((queue) => {
+      // 更新广场记录（所有 done 条目，倒序）
+      const doneItems = [...queue]
+        .filter((q) => q.status === 'done')
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+      setAllQueue(doneItems);
+
       const relevant = queue.filter(
         (q) =>
           q.status === 'pending' ||
@@ -571,6 +706,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
               : '',
             productLine: item.productLine, name: item.name,
             requirementType: item.requirementType,
+            designMode: item.designMode,
             targetMenuKeys: item.targetMenuKeys,
             sourceFiles: item.sourceFiles,
           }
@@ -618,7 +754,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
 
   // 确认加入菜单（弹窗回调）
   // 已有功能需求完成后可能没有 html（直接改源文件），用空字符串占位
-  const handleConfirmAddToMenu = useCallback((menuPath: string) => {
+  const handleConfirmAddToMenu = useCallback((menuPath: string, stateLabels: { key: string; label: string }[]) => {
     if (!addToMenuMsg) return;
     const proto = createPrototype(
       addToMenuMsg.name ?? '需求',
@@ -631,6 +767,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
       menuPath,
       addToMenuMsg.requirementType,
       addToMenuMsg.designMode ?? designMode,
+      stateLabels.length > 0 ? stateLabels : undefined,
     );
     handleSaved(proto);
     setAddToMenuMsg(null);
@@ -661,10 +798,51 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
     );
   }, []);
 
+  // 从广场记录中打开某条生成记录进入预览
+  const handleOpenRecord = useCallback((item: QueueItem) => {
+    setProductLine(item.productLine);
+    setRequirementType(item.requirementType ?? 'new-menu');
+    setDesignMode(item.designMode ?? 'admin');
+    if (item.requirementType === 'existing-feature' && item.targetMenuKeys) {
+      setSelectedMenuKeys(item.targetMenuKeys);
+    }
+    // 构造消息对
+    const userMsg: ChatMsg = {
+      id: `u-${item.id}`, role: 'user',
+      text: `**${item.name}**\n\n${item.requirement}`,
+      productLine: item.productLine, name: item.name,
+      requirementType: item.requirementType,
+      targetMenuKeys: item.targetMenuKeys,
+      sourceFiles: item.sourceFiles,
+    };
+    const aiMsg: ChatMsg = {
+      id: `ai-${item.id}`, role: 'ai',
+      queueId: item.id,
+      status: 'done',
+      html: item.html ?? undefined,
+      text: item.requirementType === 'existing-feature'
+        ? `✅ 已完成修改！源文件已更新，请刷新对应菜单页面确认效果，满意后加入菜单。\n\n📁 已修改文件：${(item.sourceFiles ?? []).join('、')}`
+        : '✅ 原型已生成！点击「预览原型」查看效果，满意后加入菜单。',
+      productLine: item.productLine, name: item.name,
+      requirementType: item.requirementType,
+      designMode: item.designMode,
+      targetMenuKeys: item.targetMenuKeys,
+      sourceFiles: item.sourceFiles,
+    };
+    setMessages([userMsg, aiMsg]);
+    setView('designing');
+    setChatStep('chatting');
+    // 有 html 则直接跳预览 tab，否则跳聊天 tab
+    setActiveTab(item.html ? 'preview' : 'chat');
+    setHasNewPreview(false);
+  }, []);
+
   // ── Landing page ──
   if (view === 'landing') {
     return (
       <LandingPage
+        allQueue={allQueue}
+        library={library}
         onSelect={(pl, type, mode) => {
           setProductLine(pl);
           setRequirementType(type);
@@ -675,6 +853,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
           setMessages([]);
           setSelectedMenuKeys([]);
         }}
+        onOpenRecord={handleOpenRecord}
       />
     );
   }
@@ -775,6 +954,7 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
             <ChatPanel
               productLine={productLine}
               requirementType={requirementType}
+              designMode={designMode}
               selectedMenuKeys={selectedMenuKeys}
               onSelectedMenuKeysChange={setSelectedMenuKeys}
               messages={messages}
@@ -846,15 +1026,22 @@ export default function RequirementPrototypePage({ onPrototypeSaved, onNavigateT
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage({
+  allQueue,
+  library,
   onSelect,
+  onOpenRecord,
 }: {
+  allQueue: QueueItem[];
+  library: SavedPrototype[];
   onSelect: (pl: PrototypeProductLine, type: RequirementType, mode: DesignMode) => void;
+  onOpenRecord: (item: QueueItem) => void;
 }) {
   const [hoveredPl, setHoveredPl] = useState<PrototypeProductLine | null>(null);
   const [selectedPl, setSelectedPl] = useState<PrototypeProductLine | null>(null);
   // 选中产品线后，先选设计模式，再展开需求类型
   const [selectedMode, setSelectedMode] = useState<DesignMode | null>(null);
   const [typedIndex, setTypedIndex] = useState(0);
+  const [recordFilter, setRecordFilter] = useState<PrototypeProductLine | 'all'>('all');
 
   const TYPED_TEXTS = ['快速原型设计', '智能需求理解', '一键生成页面', 'AI 辅助迭代'];
   const currentText = TYPED_TEXTS[typedIndex % TYPED_TEXTS.length];
@@ -865,6 +1052,10 @@ function LandingPage({
   }, []);
 
   const productLines = Object.keys(PRODUCT_LINE_LABEL) as PrototypeProductLine[];
+
+  const filteredQueue = recordFilter === 'all'
+    ? allQueue
+    : allQueue.filter((q) => q.productLine === recordFilter);
 
   return (
     <div
@@ -1172,6 +1363,129 @@ function LandingPage({
           <Globe className="w-3.5 h-3.5" />
           <span className="text-[11px]">更多业务线持续接入中…</span>
         </motion.div>
+
+        {/* ── 生成记录区块 ── */}
+        {allQueue.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9 }}
+            className="mt-8 w-full"
+          >
+            {/* 区块标题 */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-accent/15 flex items-center justify-center">
+                  <BookOpen className="w-3 h-3 text-accent" />
+                </div>
+                <span className="text-sm font-semibold text-ink">生成记录</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/8 text-gray-400 dark:text-white/35 font-medium">
+                  {allQueue.length}
+                </span>
+              </div>
+              {/* 产品线筛选 */}
+              <div className="flex gap-1">
+                {(['all', ...productLines] as const).map((pl) => (
+                  <button
+                    key={pl}
+                    type="button"
+                    onClick={() => setRecordFilter(pl)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                      recordFilter === pl
+                        ? 'bg-accent/12 text-accent border border-accent/25'
+                        : 'text-gray-400 dark:text-white/35 hover:bg-gray-100 dark:hover:bg-white/6 border border-transparent'
+                    }`}
+                  >
+                    {pl === 'all' ? '全部' : PRODUCT_LINE_LABEL[pl]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 记录卡片列表 */}
+            <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+              {filteredQueue.map((item) => {
+                const plColor = COLORS[item.productLine];
+                const isSaved = library.some((p) => p.queueId === item.id);
+                const isHtml = !!item.html;
+                const dateStr = new Date(item.updatedAt).toLocaleString('zh-CN', {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                });
+                return (
+                  <motion.div
+                    key={item.id}
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={() => onOpenRecord(item)}
+                    className="group relative flex flex-col gap-2 p-3.5 rounded-xl border border-line bg-white dark:bg-white/3 hover:border-accent/30 hover:shadow-md cursor-pointer transition-all"
+                    style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+                  >
+                    {/* 顶部行：产品线色点 + 名称 + 类型标签 */}
+                    <div className="flex items-start gap-2">
+                      <div
+                        className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                        style={{ background: plColor }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-ink truncate leading-snug">
+                          {item.name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                            style={{ background: `${plColor}12`, color: plColor }}
+                          >
+                            {PRODUCT_LINE_LABEL[item.productLine]}
+                          </span>
+                          {item.requirementType === 'existing-feature' ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                              功能调整
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/8 text-accent font-medium">
+                              新功能
+                            </span>
+                          )}
+                          {item.designMode === 'mobile' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-sky-500/10 text-sky-500 font-medium flex items-center gap-0.5">
+                              <Smartphone className="w-2.5 h-2.5" />
+                              移动端
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* 已加入菜单标识 */}
+                      {isSaved && (
+                        <div className="shrink-0 w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center" title="已加入菜单">
+                          <Check className="w-3 h-3 text-emerald-500" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 需求摘要 */}
+                    <p className="text-[11px] text-gray-400 dark:text-white/30 line-clamp-2 leading-relaxed pl-3.5">
+                      {item.requirement.replace(/^.*?\n\n/, '').slice(0, 80)}
+                    </p>
+
+                    {/* 底部行：时间 + 操作提示 */}
+                    <div className="flex items-center justify-between pl-3.5">
+                      <span className="text-[10px] text-gray-300 dark:text-white/20">{dateStr}</span>
+                      <span className={`text-[10px] font-medium flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        isHtml ? 'text-accent' : 'text-emerald-500'
+                      }`}>
+                        {isHtml ? (
+                          <><Monitor className="w-2.5 h-2.5" />查看原型</>
+                        ) : (
+                          <><ExternalLink className="w-2.5 h-2.5" />查看记录</>
+                        )}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );
@@ -1570,6 +1884,7 @@ function HistoryPreviewPanel({
 function ChatPanel({
   productLine,
   requirementType,
+  designMode,
   selectedMenuKeys,
   onSelectedMenuKeysChange,
   messages,
@@ -1585,6 +1900,7 @@ function ChatPanel({
 }: {
   productLine: PrototypeProductLine;
   requirementType: RequirementType;
+  designMode: DesignMode;
   selectedMenuKeys: string[];
   onSelectedMenuKeysChange: (keys: string[]) => void;
   messages: ChatMsg[];
@@ -1650,6 +1966,14 @@ function ChatPanel({
             isExistingReq ? '✅ AI 已完成修改，请查看对话结果' : '✅ 原型已生成！点击下方「预览原型」查看',
             !isExistingReq,
           );
+        } else if (found?.status === 'error') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.queueId === id
+                ? { ...m, status: 'error' as MsgStatus, text: '❌ AI 生成失败。请确认 .env 中已正确配置 VITE_GEMINI_API_KEY，然后重试。' }
+                : m
+            )
+          );
         }
       }
     }, 2000);
@@ -1689,6 +2013,7 @@ function ChatPanel({
       text: pendingText, queueId: id,
       status: 'pending', productLine, name: reqName,
       requirementType,
+      designMode,
       targetMenuKeys: isExisting ? selectedMenuKeys : undefined,
       sourceFiles,
     };
@@ -1701,6 +2026,7 @@ function ChatPanel({
     const ok = await pushQueue({
       id, productLine, name: reqName, requirement: input.trim(),
       requirementType,
+      designMode,
       targetMenuKeys: isExisting ? selectedMenuKeys : undefined,
       sourceFiles,
     });

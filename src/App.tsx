@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import LoginPage, { checkSession, clearSession, saveSession } from './LoginPage';
 import { 
   Trophy, 
   Users, 
@@ -62,6 +63,7 @@ import {
   Moon,
   Sun,
   Wand2,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Smartphone,
@@ -202,6 +204,7 @@ import {
   PRODUCT_LINE_LABEL as PROTO_PRODUCT_LINE_LABEL,
 } from './savedPrototypesModel';
 import { DevSaveToRepo } from './DevSaveToRepo';
+import { ProjectCustomizationPage } from './ProjectCustomizationPage';
 
 const PM_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-pm-drawer-width';
 const ITERATION_RECORD_DRAWER_WIDTH_STORAGE_KEY = 'ybdiedai-iteration-record-drawer-width';
@@ -330,6 +333,7 @@ type ModuleType =
   | 'ruleDescription'
   | 'rewardManagement'
   | 'youboomTeam'
+  | 'projectCustomization'
   | 'productStaff'
   | 'ganttMap'
   | 'dashboard'
@@ -350,6 +354,7 @@ const MODULE_PAGE_TITLE: Record<ModuleType, string> = {
   auditMessageNotification: '消息通知记录',
   rewardManagement: '奖励管理',
   youboomTeam: '团队数据',
+  projectCustomization: '项目定制',
   config: '字段配置',
   ruleDescription: '规则说明',
   productStaff: '产研人员管理',
@@ -471,6 +476,23 @@ const textFieldInputClass =
   'min-w-[120px] max-w-[200px] px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-sm';
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => checkSession());
+
+  if (!isLoggedIn) {
+    return (
+      <LoginPage
+        onLogin={() => {
+          saveSession();
+          setIsLoggedIn(true);
+        }}
+      />
+    );
+  }
+
+  return <AppInner onLogout={() => { clearSession(); setIsLoggedIn(false); }} />;
+}
+
+function AppInner({ onLogout }: { onLogout: () => void }) {
   const [isDark, setIsDark] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleType>('ganttMap');
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>('individual');
@@ -849,6 +871,8 @@ export default function App() {
 
   // 「用户端需求原型」当前所属业务线（用于区分三个菜单入口）
   const [userPrototypeLine, setUserPrototypeLine] = useState<'youbao' | 'youboom' | 'mentor'>('youbao');
+  // 每次原型保存后递增，用于强制 UserPrototypePage 重新读取 localStorage
+  const [protoVersion, setProtoVersion] = useState(0);
 
   const youbaoChildren = [
     { id: 'dashboard' as const, name: 'Dashboard', icon: LayoutDashboard },
@@ -879,7 +903,8 @@ export default function App() {
     activeModule === 'auditEntryWorkbench' ||
     activeModule === 'auditMessageNotification' ||
     activeModule === 'requirementPrototype' ||
-    activeModule === 'userPrototype';
+    activeModule === 'userPrototype' ||
+    activeModule === 'projectCustomization';
 
   const pageRuleHeaderAction = useMemo(() => {
     if (activeModule === 'ganttMap' || activeModule === 'dashboard') {
@@ -1510,6 +1535,25 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setNavSections((s) => ({ ...s, youbao: true }));
+                    selectModule('projectCustomization');
+                  }}
+                  className={`
+                    flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all cursor-pointer
+                    ${activeModule === 'projectCustomization' ? 'bg-accent/5 text-accent' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-white/55 dark:hover:bg-white/8 dark:hover:text-white/90'}
+                  `}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Settings2
+                      className={`shrink-0 h-4 w-4 ${activeModule === 'projectCustomization' ? 'text-accent' : 'text-gray-400 dark:text-white/35'}`}
+                    />
+                    <span className="nav-label truncate">项目定制</span>
+                  </span>
+                  {activeModule === 'projectCustomization' ? <ChevronRight className="h-4 w-4" /> : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNavSections((s) => ({ ...s, youbao: true }));
                     selectModule('userPrototype');
                     setUserPrototypeLine('youbao');
                   }}
@@ -1937,6 +1981,14 @@ export default function App() {
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:text-white/40 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors cursor-pointer"
+                title="退出登录"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </>
           ) : (
             <div className="flex items-center justify-between">
@@ -1946,17 +1998,27 @@ export default function App() {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <p className="text-xs font-medium text-gray-900 dark:text-white/85 truncate">Admin User</p>
-                  <p className="text-[10px] text-gray-500 dark:text-white/45 truncate">renataluoy@gmail.com</p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/45 truncate">admin</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsDark((v) => !v)}
-                className="ml-2 shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
-                title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
-              >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
+              <div className="flex items-center gap-1 ml-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsDark((v) => !v)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-white/40 dark:hover:bg-white/8 dark:hover:text-white/70 transition-colors cursor-pointer"
+                  title={isDark ? '切换到亮色模式' : '切换到暗色模式'}
+                >
+                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:text-white/40 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors cursor-pointer"
+                  title="退出登录"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -2577,8 +2639,9 @@ export default function App() {
                         className="px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 cursor-pointer shadow-sm"
                       >
                         <option value="all">内容类型</option>
-                        <option value="article">图文</option>
-                        <option value="video">视频</option>
+                        <option value="news">文章资讯</option>
+                        <option value="tutorial">图文教程</option>
+                        <option value="video">视频教程</option>
                       </select>
                       <select
                         value={academyContentTagFilter}
@@ -3050,7 +3113,7 @@ export default function App() {
                                   categoryId: defaultCat,
                                   projectName: '',
                                   projectId: '',
-                                  contentType: 'article',
+                                  contentType: 'news',
                                   content: '',
                                   status: 'show',
                                 },
@@ -3614,7 +3677,7 @@ export default function App() {
               ) : activeModule === 'requirementPrototype' ? (
                 <div className="p-4 sm:p-5">
                   <RequirementPrototypePage
-                    onPrototypeSaved={() => {}}
+                    onPrototypeSaved={() => setProtoVersion((v) => v + 1)}
                     onNavigateToModule={(module, subKey) => {
                       selectModule(module as ModuleType);
                       if (module === 'leaderboard' && subKey === 'community') {
@@ -3629,7 +3692,11 @@ export default function App() {
                 </div>
               ) : activeModule === 'userPrototype' ? (
                 <div className="p-4 sm:p-5" style={{ height: 'calc(100vh - 40px)' }}>
-                  <UserPrototypePage productLine={userPrototypeLine} />
+                  <UserPrototypePage key={`${userPrototypeLine}-${protoVersion}`} productLine={userPrototypeLine} />
+                </div>
+              ) : activeModule === 'projectCustomization' ? (
+                <div className="p-4 sm:p-5">
+                  <ProjectCustomizationPage />
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-16 text-center">
@@ -4131,7 +4198,6 @@ export default function App() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
                         关联品牌项目
-                        <span className="text-red-500">*</span>
                       </label>
                       <select
                         className="w-full px-4 py-2 border border-line rounded-lg focus:ring-2 focus:ring-accent/20 outline-none text-sm bg-white"
@@ -4175,16 +4241,32 @@ export default function App() {
                             type="radio"
                             name="academy-content-type"
                             className="accent-accent"
-                            checked={sideDrawer.form.contentType === 'article'}
+                            checked={sideDrawer.form.contentType === 'news'}
                             onChange={() =>
                               setSideDrawer((d) =>
                                 d?.variant === 'academy-content'
-                                  ? { ...d, form: { ...d.form, contentType: 'article' } }
+                                  ? { ...d, form: { ...d.form, contentType: 'news', content: '' } }
                                   : d
                               )
                             }
                           />
-                          <span className="text-sm">图文</span>
+                          <span className="text-sm">文章资讯</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="academy-content-type"
+                            className="accent-accent"
+                            checked={sideDrawer.form.contentType === 'tutorial'}
+                            onChange={() =>
+                              setSideDrawer((d) =>
+                                d?.variant === 'academy-content'
+                                  ? { ...d, form: { ...d.form, contentType: 'tutorial', content: '' } }
+                                  : d
+                              )
+                            }
+                          />
+                          <span className="text-sm">图文教程</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -4195,17 +4277,38 @@ export default function App() {
                             onChange={() =>
                               setSideDrawer((d) =>
                                 d?.variant === 'academy-content'
-                                  ? { ...d, form: { ...d.form, contentType: 'video' } }
+                                  ? { ...d, form: { ...d.form, contentType: 'video', content: '' } }
                                   : d
                               )
                             }
                           />
-                          <span className="text-sm">视频</span>
+                          <span className="text-sm">视频教程</span>
                         </label>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      {sideDrawer.form.contentType === 'article' ? (
+                      {sideDrawer.form.contentType === 'news' ? (
+                        <>
+                          <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                            跳转地址
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="url"
+                            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
+                            placeholder="请输入公众号或站内外文章的 H5 跳转地址"
+                            value={sideDrawer.form.content}
+                            onChange={(e) =>
+                              setSideDrawer((d) =>
+                                d?.variant === 'academy-content'
+                                  ? { ...d, form: { ...d.form, content: e.target.value } }
+                                  : d
+                              )
+                            }
+                          />
+                          <p className="text-xs text-gray-400">支持公众号文章链接或站内外 H5 地址，前台点击后直接跳转。</p>
+                        </>
+                      ) : sideDrawer.form.contentType === 'tutorial' ? (
                         <>
                           <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
                             内容
@@ -4238,7 +4341,7 @@ export default function App() {
                                 : d
                             )
                           }
-                          hint="支持本地视频上传，生成可播放地址（演示环境为本机 blob URL）；保存逻辑与图文一致。"
+                          hint="支持本地视频上传，生成可播放地址（演示环境为本机 blob URL）；保存逻辑与图文教程一致。"
                         />
                       )}
                     </div>
@@ -4515,10 +4618,6 @@ export default function App() {
                       alert('请选择所属分类');
                       return;
                     }
-                    if (!f.projectId.trim()) {
-                      alert('请选择关联品牌项目');
-                      return;
-                    }
                     if (sideDrawer.editingId) {
                       setAcademyContents((prev) =>
                         prev.map((c) =>
@@ -4670,7 +4769,6 @@ export default function App() {
                 <div className="space-y-2">
                   <label className="flex items-center gap-1 text-sm font-medium text-gray-700">
                     关联品牌项目
-                    <span className="text-red-500">*</span>
                   </label>
                   <select
                     className="w-full rounded-lg border border-line bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/20"
@@ -4752,10 +4850,6 @@ export default function App() {
                     }
                     if (!f.categoryId) {
                       alert('请选择所属分类');
-                      return;
-                    }
-                    if (!f.projectId.trim()) {
-                      alert('请选择关联品牌项目');
                       return;
                     }
                     const ok = f.videoRows.filter((r) => r.status === 'success' && r.url);
@@ -4969,6 +5063,18 @@ export default function App() {
                   controls
                   className="w-full max-h-[60vh] rounded-lg bg-black"
                 />
+              ) : contentPreview.contentType === 'news' ? (
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <p className="text-sm text-gray-500">该内容为文章资讯（H5 跳转），点击下方链接查看完整内容：</p>
+                  <a
+                    href={contentPreview.content}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-sm text-accent underline underline-offset-2 hover:text-accent/80"
+                  >
+                    {contentPreview.content}
+                  </a>
+                </div>
               ) : /^\s*</.test(contentPreview.content) ? (
                 <div
                   className="prose prose-sm max-w-none text-gray-800"
@@ -5998,8 +6104,14 @@ function AcademyContentTable({
                 </div>
               </td>
               <td className="px-3 py-4 sm:px-4">
-                <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">
-                  {item.contentType === 'article' ? '图文' : '视频'}
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                  item.contentType === 'news'
+                    ? 'bg-sky-100 text-sky-700'
+                    : item.contentType === 'tutorial'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {item.contentType === 'news' ? '文章资讯' : item.contentType === 'tutorial' ? '图文教程' : '视频教程'}
                 </span>
               </td>
               <td className="px-3 py-4 sm:px-4 max-w-[200px]">
@@ -6007,9 +6119,9 @@ function AcademyContentTable({
                   <span className="cursor-default text-xs text-gray-500">{contentSnippet(item)}</span>
                   <div className="pointer-events-none absolute left-0 top-full z-[55] mt-2 max-h-48 w-72 overflow-auto rounded-lg border border-line bg-gray-900 px-3 py-2 text-left text-[11px] leading-relaxed text-white opacity-0 shadow-xl transition-opacity group-hover/cell:pointer-events-auto group-hover/cell:opacity-100">
                     <div className="mb-1 font-semibold text-blue-300">
-                      {item.contentType === 'video' ? '视频地址' : '图文摘要'}
+                      {item.contentType === 'video' ? '视频地址' : item.contentType === 'news' ? '跳转地址' : '图文摘要'}
                     </div>
-                    {item.contentType === 'video' ? (
+                    {item.contentType === 'video' || item.contentType === 'news' ? (
                       <span className="break-all font-mono">{item.content}</span>
                     ) : (
                       <span className="whitespace-pre-wrap break-words">{item.content.replace(/<[^>]+>/g, '')}</span>

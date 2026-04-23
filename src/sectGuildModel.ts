@@ -131,8 +131,10 @@ export interface SectGuildRow {
   name: string;
   leaderName: string;
   iconUrl: string;
-  /** 门派标签，自由文本 */
+  /** 门派标签，最多 1 个 */
   tags: string;
+  /** 门派公告（非必填） */
+  announcement?: string;
   projectCount: number;
   mentorCount: number;
   studentCount: number;
@@ -149,6 +151,7 @@ export type SectGuildFormState = {
   leaderName: string;
   iconUrl: string;
   tags: string;
+  announcement: string;
   intro: Record<SectIntroTabKey, SectIntroBlock>;
 };
 
@@ -158,6 +161,7 @@ export function emptySectGuildForm(): SectGuildFormState {
     leaderName: '',
     iconUrl: '',
     tags: '',
+    announcement: '',
     intro: defaultSectIntroTabs(),
   };
 }
@@ -168,6 +172,7 @@ export function rowToSectGuildForm(row: SectGuildRow): SectGuildFormState {
     leaderName: row.leaderName,
     iconUrl: row.iconUrl,
     tags: row.tags ?? '',
+    announcement: row.announcement ?? '',
     intro: structuredClone(row.intro),
   };
 }
@@ -188,6 +193,7 @@ export function createSectGuildRowFromForm(
     leaderName: form.leaderName.trim(),
     iconUrl: form.iconUrl.trim(),
     tags: form.tags.trim(),
+    announcement: form.announcement.trim() || undefined,
     projectCount: stats.projectCount,
     mentorCount: stats.mentorCount,
     studentCount: stats.studentCount,
@@ -213,7 +219,8 @@ export const sectGuildSeedData: SectGuildRow[] = _sectGuildFromFile.length > 0
     name: '青云门',
     leaderName: '林导师',
     iconUrl: 'https://picsum.photos/seed/sect-qing/96/96',
-    tags: '小说推文,短剧',
+    tags: '小说推文',
+    announcement: '本月收益结算延迟至每月 10 日，请各位学员知悉。',
     projectCount: 12,
     mentorCount: 5,
     studentCount: 128,
